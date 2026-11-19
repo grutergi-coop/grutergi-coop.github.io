@@ -1,0 +1,30 @@
+rules_version = '2';
+// 그루터기 사회적협동조합 — Firestore 보안 규칙
+// members/{uid}  : 조합원 명부. 본인만 읽기, 관리자만 쓰기
+// meetings/{id}  : 총회·이사회 자료 링크. 승인된 조합원만 읽기, 관리자만 쓰기
+// admins/{uid}   : 관리자 목록. 콘솔에서 직접 추가
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function isApproved() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.approved == true;
+    }
+    match /members/{uid} {
+      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /meetings/{id} {
+      allow read: if isApproved() || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /admins/{uid} {
+      allow read, write: if false;
+    }
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
