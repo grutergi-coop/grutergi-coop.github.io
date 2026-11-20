@@ -12,10 +12,10 @@ const mqReduce = window.matchMedia ? matchMedia("(prefers-reduced-motion: reduce
 const mqShort = window.matchMedia ? matchMedia("(max-height: 479px)") : { matches: false };
 const still = () => mqReduce.matches || mqShort.matches;
 
-const hdr = $("#hdr"), hero = $("#s-hero"), about = $("#about"), vis = $("#s-vision"), ringsSec = $("#rings"), kids = $("#kids");
+const hdr = $("#hdr"), hero = $("#s-hero"), about = $("#about"), vis = $("#s-vision"), ringsSec = $("#rings"), kids = $("#kids"), call = $("#s-call");
 const GOLD = ["지혜", "빛", "별", "영원토록"];
 let words = [], rings = [], tlItems = [];
-const darks = [about, $("#inquiry"), $(".site-footer")].filter(Boolean);
+const darks = [about, call, $("#inquiry"), $(".site-footer")].filter(Boolean);
 
 // 중심 말씀을 단어로 나눔 (글자만 다룸)
 function splitSay() {
@@ -45,7 +45,14 @@ function buildRings() {
     return c;
   });
 }
-function setup() { splitSay(); buildRings(); root.classList.toggle("still", still()); frame(); }
+// 키워드 개수만큼 아래 작은 등불을 만듦
+let keyItems = [], lamps = [];
+function buildLamps() {
+  const box = $("#s-call .lamps"); if (!box) return;
+  box.textContent = ""; keyItems = $$("#keys li");
+  lamps = keyItems.map((li) => { const l = document.createElement("li"); const s = document.createElement("span"); s.textContent = ($("[data-t]", li) || li).textContent; l.append(s); box.append(l); return l; });
+}
+function setup() { splitSay(); buildRings(); buildLamps(); root.classList.toggle("still", still()); frame(); }
 
 // 장면 안에서 얼마나 내려왔는지 0~1
 function prog(el) {
@@ -63,13 +70,22 @@ function frame() {
     const y = 34, dark = darks.some((s) => { const r = s.getBoundingClientRect(); return r.top <= y && r.bottom >= y; });
     hdr.classList.toggle("dark", dark);
   }
-  if (still()) { words.forEach((w) => on(w, true)); rings.forEach((c) => on(c, true)); tlItems.forEach((l) => on(l, true)); $$("#vision .item, #s-vision .pics img").forEach((e) => on(e, true)); return; }
+  if (still()) { words.forEach((w) => on(w, true)); rings.forEach((c) => on(c, true)); tlItems.forEach((l) => on(l, true)); $$("#vision .item, #s-vision .pics img, #keys li").forEach((e) => on(e, true)); return; }
 
   if (hero) hero.style.setProperty("--p", prog(hero).toFixed(4));
 
   if (about && words.length) {
     const n = Math.round(clamp(prog(about) * 1.2) * words.length);
     words.forEach((w, i) => on(w, i < n));
+  }
+  if (call && keyItems.length) {
+    // 앞 18%: 시대와 부르심 문장 → 이후: 키워드가 하나씩, 터널 끝 빛으로 다가감
+    const p = prog(call), a = clamp(1 - (p - 0.1) / 0.07), b = clamp((p - 0.18) / 0.05);
+    const q = clamp((p - 0.2) / 0.78), k = Math.min(keyItems.length - 1, Math.floor(q * keyItems.length));
+    call.style.setProperty("--a", a.toFixed(3)); call.style.setProperty("--b", b.toFixed(3)); call.style.setProperty("--q", clamp(p / 0.98).toFixed(4));
+    call.classList.toggle("k-on", b > 0);
+    keyItems.forEach((e, i) => on(e, i === k && b > 0));
+    lamps.forEach((l, i) => { l.classList.toggle("lit", b > 0 && i <= k); l.classList.toggle("cur", b > 0 && i === k); });
   }
   if (vis) {
     const p = prog(vis), items = $$("#vision .item"), pics = $$("#s-vision .pics img");

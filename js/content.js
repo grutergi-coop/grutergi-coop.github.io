@@ -28,6 +28,7 @@ try {
       strip.hidden = h.stripShow === false;
       const a = $("#strip-link") || strip; if (a && h.stripLink) a.setAttribute("href", safeHref(h.stripLink));
     }
+    fillPairs($("#keys"), h.keys);
     fillPairs($("#vision"), h.vision);
     fillPairs($("#values"), h.values);
     fillPairs($("#members"), h.members);
