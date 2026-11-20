@@ -182,6 +182,9 @@ async function home() {
   for (const [k, l, m] of [["stripTag", "작은 표시", 10], ["stripText", "띠 문구", 120], ["stripLink", "연결 주소", 200]]) {
     const f = field(l, data[k], { max: m, help: k === "stripLink" ? "예: notice/view.html?id=2026-01" : "" }); inputs[k] = f.input; g0.append(f.w);
   }
+  const pIntro = panel("시작 애니메이션");
+  const iShow = check("첫 화면 시작 애니메이션 보이기 (방문자마다 하루 한 번, 누르면 넘어감)", data.introShow !== false); pIntro.append(iShow.w);
+  pIntro.append(el("p", { class: "sub muted" }, "확인용으로 다시 보려면 주소 끝에 ?intro=1 을 붙여 여세요."));
   const pText = panel("글");
   const g = el("div", { class: "grid-2" }); pText.append(g);
   HOME_TEXT.forEach(([k, l, m, multi]) => { const f = field(l, data[k], { max: m, multi }); inputs[k] = f.input; g.append(f.w); });
@@ -210,7 +213,7 @@ async function home() {
 
   const save = btn("저장하기", "btn-primary", async () => {
     save.disabled = true;
-    const next = { stripShow: sShow.input.checked };
+    const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
     next.pillars = getPillars(); next.members = getMembers();
     next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
