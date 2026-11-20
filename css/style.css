@@ -414,6 +414,12 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);outline:2px so
   #rings .timeline span{font-size:15px;line-height:1.5;display:block}
 }
 
+/* 나이테 그림(수채화): 가운데부터 한 겹씩 드러남 */
+.home .rings{background:#EEF2EA}
+img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-mode:multiply;border-radius:50%}
+.js-scroll:not(.still) img.ring-art{-webkit-clip-path:circle(calc(12% + var(--r,0) * 40%) at 50% 50%);clip-path:circle(calc(12% + var(--r,0) * 40%) at 50% 50%);transition:-webkit-clip-path .5s ease,clip-path .5s ease}
+@media (max-width:860px){img.ring-art{max-width:none;border-radius:50%}}
+
 /* 6. 어린이집: 사진이 펼쳐짐 */
 #kids .stick{min-height:78vh;display:flex;align-items:flex-end}
 #kids .photo{position:absolute;top:0;right:0;bottom:0;left:0;background:#2b3a2f url("../assets/forest-kids.webp") center/cover no-repeat}
