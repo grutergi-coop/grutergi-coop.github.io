@@ -32,16 +32,18 @@ try {
     fillPairs($("#vision"), h.vision);
     fillPairs($("#values"), h.values);
     fillPairs($("#members"), h.members);
-    if (Array.isArray(h.timeline)) {
-      const ol = $("#timeline"); ol.textContent = "";
+    const ol = $("#timeline");
+    if (ol && Array.isArray(h.timeline)) {
+      ol.textContent = "";
       h.timeline.forEach((t) => {
         const li = el("li", t.now ? { class: "now" } : null);
         li.append(el("b", null, t.when), el("span", null, t.what));
         ol.append(li);
       });
     }
-    if (Array.isArray(h.kidsList)) {
-      const ul = $("#kids-list"); ul.textContent = "";
+    const ul = $("#kids-list");
+    if (ul && Array.isArray(h.kidsList)) {
+      ul.textContent = "";
       h.kidsList.forEach((t) => ul.append(el("li", null, t)));
     }
   }
