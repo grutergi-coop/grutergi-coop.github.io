@@ -155,7 +155,7 @@ const HOME_TEXT = [
   ["eyebrow", "맨 위 작은 글씨", 80], ["heroTitle", "큰 제목 (줄바꿈 가능)", 80, true], ["heroText", "첫 화면 소개 글", 400, true],
   ["cta1", "첫 번째 단추 글자", 20], ["ctaNotice", "두 번째 단추 글자 (공고 게시판으로 연결)", 20],
   ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
-  ["callRef", "시대와 부르심 · 작은 글씨", 60], ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
+  ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
   ["keysIntro", "일곱 가지 키워드 제목", 60],
   ["inquiryTitle", "문의 제목", 60], ["inquiryText", "문의 안내 글", 300, true],
   ["footNote", "맨 아래 안내", 120]
