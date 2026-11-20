@@ -183,7 +183,7 @@ async function home() {
     const f = field(l, data[k], { max: m, help: k === "stripLink" ? "예: notice/view.html?id=2026-01" : "" }); inputs[k] = f.input; g0.append(f.w);
   }
   const pIntro = panel("첫 화면 빛 효과");
-  const iShow = check("빛 알갱이 · 낮에는 노란 나비 · 밤(저녁 7시~새벽 6시)에는 반딧불이 보이기", data.introShow !== false); pIntro.append(iShow.w);
+  const iShow = check("빛 알갱이 · 낮에는 나뭇잎 햇살 · 밤(저녁 7시~새벽 6시)에는 반딧불이 보이기", data.introShow !== false); pIntro.append(iShow.w);
   pIntro.append(el("p", { class: "sub muted" }, "낮·밤 모습을 미리 보려면 첫 화면 주소 끝에 ?time=day 또는 ?time=night 를 붙여 여세요."));
   const pText = panel("글");
   const g = el("div", { class: "grid-2" }); pText.append(g);
