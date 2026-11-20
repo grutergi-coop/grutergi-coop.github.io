@@ -300,7 +300,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);outline:2px so
 .say{margin:0}
 .say p{font-family:var(--f-head);font-weight:700;font-size:clamp(28px,4.3vw,60px);line-height:1.5;max-width:16em}
 .js-scroll:not(.still) .say .w{opacity:.16;transition:opacity .3s linear,color .3s linear}
-.say .w.on{opacity:1}
+.say .w.on,.js-scroll:not(.still) .say .w.on{opacity:1}
 .say .w.gold{color:var(--gold)}
 .js-scroll:not(.still) .say .w.gold{color:#fff}
 .js-scroll:not(.still) .say .w.gold.on{color:var(--gold)}
