@@ -154,8 +154,10 @@ async function dash() {
 const HOME_TEXT = [
   ["eyebrow", "맨 위 작은 글씨", 80], ["heroTitle", "큰 제목 (줄바꿈 가능)", 80, true], ["heroText", "첫 화면 소개 글", 400, true],
   ["cta1", "첫 번째 단추 글자", 20], ["cta2", "두 번째 단추 글자", 20],
-  ["pillarsTitle", "세 가지 제목", 60], ["ringsTitle", "연혁 제목", 60], ["ringsText", "연혁 설명", 300, true],
-  ["joinTitle", "함께하기 제목", 60], ["joinNote", "출자 안내 한 줄", 120], ["joinFoot", "함께하기 아래 안내", 200],
+  ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
+  ["visionTitle", "비전 세 가지 제목", 60], ["valuesTitle", "네 가지 가치 제목", 60],
+  ["ringsTitle", "연혁 제목", 60], ["ringsText", "연혁 설명", 300, true],
+  ["joinTitle", "함께하기 제목", 60], ["joinBig", "함께하기 큰 글씨", 30], ["joinNote", "출자 안내 한 줄", 120], ["joinFoot", "함께하기 아래 안내", 200],
   ["kidsTitle", "어린이집 제목", 60], ["kidsText", "어린이집 설명", 300, true],
   ["inquiryTitle", "문의 제목", 60], ["inquiryText", "문의 안내 글", 300, true],
   ["address", "주된 사무소 주소", 120], ["footNote", "맨 아래 안내", 120]
@@ -176,8 +178,8 @@ async function home() {
     return;
   }
   const inputs = {};
-  const pStrip = panel("공고 띠 (맨 위 초록 띠)");
-  const sShow = check("공고 띠 보이기", data.stripShow !== false); pStrip.append(sShow.w);
+  const pStrip = panel("공고 알림 (첫 화면 제목 위)");
+  const sShow = check("공고 알림 보이기", data.stripShow !== false); pStrip.append(sShow.w);
   const g0 = el("div", { class: "grid-2" }); pStrip.append(g0);
   for (const [k, l, m] of [["stripTag", "작은 표시", 10], ["stripText", "띠 문구", 120], ["stripLink", "연결 주소", 200]]) {
     const f = field(l, data[k], { max: m, help: k === "stripLink" ? "예: notice/view.html?id=2026-01" : "" }); inputs[k] = f.input; g0.append(f.w);
@@ -187,14 +189,15 @@ async function home() {
   pIntro.append(el("p", { class: "sub muted" }, "낮·밤 모습을 미리 보려면 첫 화면 주소 끝에 ?time=day 또는 ?time=night 를 붙여 여세요."));
   const pText = panel("글");
   const g = el("div", { class: "grid-2" }); pText.append(g);
-  HOME_TEXT.forEach(([k, l, m, multi]) => { const f = field(l, data[k], { max: m, multi }); inputs[k] = f.input; g.append(f.w); });
+  HOME_TEXT.forEach(([k, l, m, multi]) => { const f = field(l, data[k] ?? HOME[k], { max: m, multi }); inputs[k] = f.input; g.append(f.w); });
 
   const pair = (title, key) => {
     const p = panel(title); const rows = [];
-    (data[key] || []).forEach((it, i) => { const g2 = el("div", { class: "grid-2" }); const a = field((i + 1) + " 제목", it.title, { max: 60 }); const b = field((i + 1) + " 설명", it.text, { max: 300, multi: true }); g2.append(a.w, b.w); p.append(g2); rows.push([a.input, b.input]); });
+    (data[key] || HOME[key] || []).forEach((it, i) => { const g2 = el("div", { class: "grid-2" }); const a = field((i + 1) + " 제목", it.title, { max: 60 }); const b = field((i + 1) + " 설명", it.text, { max: 300, multi: true }); g2.append(a.w, b.w); p.append(g2); rows.push([a.input, b.input]); });
     return () => rows.map(([a, b]) => ({ title: a.value.trim(), text: b.value.trim() }));
   };
-  const getPillars = pair("세 가지 (아이콘 옆 글)", "pillars");
+  const getVision = pair("비전 세 가지 (스크롤하면 그림과 함께 차례로 바뀜)", "vision");
+  const getValues = pair("네 가지 가치 (큰 글자 · 한 줄)", "values");
   const getMembers = pair("조합원 세 유형", "members");
 
   const pTl = panel("연혁 (나이테)"); const tlBox = el("div", { class: "repeat" }); pTl.append(tlBox);
@@ -215,7 +218,7 @@ async function home() {
     save.disabled = true;
     const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
-    next.pillars = getPillars(); next.members = getMembers();
+    next.vision = getVision(); next.values = getValues(); next.members = getMembers();
     next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
     next.kidsList = [...kBox.children].map((i) => i._get()).filter(Boolean);
     next.updatedAt = serverTimestamp(); next.updatedBy = me.email;
