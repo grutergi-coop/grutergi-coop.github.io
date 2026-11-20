@@ -228,21 +228,16 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);outline:2px so
   .adm-side button{white-space:nowrap;flex:0 0 auto}
 }
 
-/* ── 첫 화면 빛 효과 (빛 알갱이 · 낮 나비 · 밤 반딧불이) ── */
+/* ── 첫 화면 빛 효과 (빛 알갱이 · 낮 나뭇잎 햇살 · 밤 반딧불이) ── */
 .hero-fx{position:absolute;top:0;right:0;bottom:0;left:0;pointer-events:none;overflow:hidden}
 .hero-fx.paused *{animation-play-state:paused!important}
 .fx-night{position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(90deg,rgba(18,40,44,0) 34%,rgba(18,40,44,.46) 62%,rgba(12,30,36,.62) 100%);mix-blend-mode:multiply}
 .fx-mote{position:absolute;width:var(--s,4px);height:var(--s,4px);margin-left:calc(var(--s,4px) / -2);border-radius:50%;background:#fff;box-shadow:0 0 8px 2px rgba(255,236,190,.85);opacity:0;animation:fxRise var(--d,6s) ease-out var(--dl,0s) infinite}
 .is-night .fx-mote{box-shadow:0 0 9px 3px rgba(214,240,140,.8);background:#F4FFD6}
 @keyframes fxRise{0%{opacity:0;transform:translate(0,0) scale(.6)}15%{opacity:var(--o,.85)}100%{opacity:0;transform:translate(var(--dx,20px),var(--dy,-160px)) scale(1)}}
-.fx-fly{position:absolute;left:0;top:0;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:#F0FFB0;box-shadow:0 0 12px 5px rgba(200,240,90,.75),0 0 26px 10px rgba(180,230,80,.25);animation:fxBlink var(--d,2.4s) ease-in-out var(--dl,0s) infinite}
-@keyframes fxBlink{0%,100%{opacity:.08}45%,60%{opacity:1}}
-.fx-bfly{position:absolute;left:0;top:0;width:36px;height:29px;margin:-14px 0 0 -18px}
-.fx-bfly svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 2px 2px rgba(60,50,10,.18))}
-.fx-bfly .w path{fill:#F4CB45;stroke:#D19A1C;stroke-width:.8}
-.fx-bfly .w{transform-origin:20px 17px;animation:fxFlap var(--flap,.26s) ease-in-out infinite alternate}
-.fx-bfly .body{fill:#5B4520}
-@keyframes fxFlap{from{transform:scaleX(1)}to{transform:scaleX(.18)}}
+.fx-fly{position:absolute;left:0;top:0;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#EEFFB8;box-shadow:0 0 7px 3px rgba(200,240,100,.5),0 0 16px 6px rgba(180,230,80,.14);opacity:.03;will-change:transform,opacity}
+.fx-sun{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(255,246,214,.62),rgba(255,236,184,.3) 55%,rgba(255,236,184,0));mix-blend-mode:screen;opacity:0;will-change:opacity,transform}
+.fx-beam{position:absolute;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,243,205,.5),rgba(255,240,200,.18) 55%,rgba(255,240,200,0));-webkit-filter:blur(10px);filter:blur(10px);mix-blend-mode:screen;opacity:0}
 @media (max-width:767px){.fx-night{background:linear-gradient(180deg,rgba(18,40,44,0) 48%,rgba(18,40,44,.4) 72%,rgba(12,30,36,.55) 100%)}}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
