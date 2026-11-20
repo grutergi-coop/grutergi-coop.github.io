@@ -153,15 +153,12 @@ async function dash() {
 // ═══ 홈 화면 내용
 const HOME_TEXT = [
   ["eyebrow", "맨 위 작은 글씨", 80], ["heroTitle", "큰 제목 (줄바꿈 가능)", 80, true], ["heroText", "첫 화면 소개 글", 400, true],
-  ["cta1", "첫 번째 단추 글자", 20], ["cta2", "두 번째 단추 글자", 20],
+  ["cta1", "첫 번째 단추 글자", 20], ["ctaNotice", "두 번째 단추 글자 (공고 게시판으로 연결)", 20],
   ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
   ["callRef", "시대와 부르심 · 작은 글씨", 60], ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
-  ["keysIntro", "일곱 가지 키워드 제목", 60], ["visionTitle", "비전 세 가지 제목", 60], ["valuesTitle", "네 가지 가치 제목", 60],
-  ["ringsTitle", "연혁 제목", 60], ["ringsText", "연혁 설명", 300, true],
-  ["joinTitle", "함께하기 제목", 60], ["joinBig", "함께하기 큰 글씨", 30], ["joinNote", "출자 안내 한 줄", 120], ["joinFoot", "함께하기 아래 안내", 200],
-  ["kidsTitle", "어린이집 제목", 60], ["kidsText", "어린이집 설명", 300, true],
+  ["keysIntro", "일곱 가지 키워드 제목", 60],
   ["inquiryTitle", "문의 제목", 60], ["inquiryText", "문의 안내 글", 300, true],
-  ["address", "주된 사무소 주소", 120], ["footNote", "맨 아래 안내", 120]
+  ["footNote", "맨 아래 안내", 120]
 ];
 async function home() {
   const snap = await getDoc(doc(db, "site", "home")).catch(() => null);
@@ -198,31 +195,11 @@ async function home() {
     return () => rows.map(([a, b]) => ({ title: a.value.trim(), text: b.value.trim() }));
   };
   const getKeys = pair("일곱 가지 키워드 (터널 속에서 하나씩 밝아짐)", "keys");
-  const getVision = pair("비전 세 가지 (스크롤하면 그림과 함께 차례로 바뀜)", "vision");
-  const getValues = pair("네 가지 가치 (큰 글자 · 한 줄)", "values");
-  const getMembers = pair("조합원 세 유형", "members");
-
-  const pTl = panel("연혁 (나이테)"); const tlBox = el("div", { class: "repeat" }); pTl.append(tlBox);
-  const addTl = (t = { when: "", what: "", now: false }) => {
-    const item = el("div", { class: "item" }); const a = el("input", { maxlength: "30", "aria-label": "때" }); a.value = t.when;
-    const b = el("input", { maxlength: "120", "aria-label": "내용" }); b.value = t.what;
-    const c = check("지금 단계", t.now); const rm = btn("빼기", "btn-danger", () => item.remove());
-    const right = el("div", { class: "tools", style: "display:flex;gap:8px;align-items:center" }); right.append(c.w, rm);
-    item.append(a, b, right); item._get = () => ({ when: a.value.trim(), what: b.value.trim(), now: c.input.checked }); tlBox.append(item);
-  };
-  (data.timeline || []).forEach(addTl); pTl.append(btn("연혁 한 줄 더하기", null, () => addTl()));
-
-  const pK = panel("어린이집 안내 목록"); const kBox = el("div", { class: "repeat" }); pK.append(kBox);
-  const addK = (t = "") => { const item = el("div", { class: "item" }); const a = el("input", { maxlength: "120", "aria-label": "안내" }); a.value = t; item.style.gridTemplateColumns = "minmax(0,1fr) auto"; item.append(a, btn("빼기", "btn-danger", () => item.remove())); item._get = () => a.value.trim(); kBox.append(item); };
-  (data.kidsList || []).forEach(addK); pK.append(btn("한 줄 더하기", null, () => addK()));
-
   const save = btn("저장하기", "btn-primary", async () => {
     save.disabled = true;
     const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
-    next.keys = getKeys(); next.vision = getVision(); next.values = getValues(); next.members = getMembers();
-    next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
-    next.kidsList = [...kBox.children].map((i) => i._get()).filter(Boolean);
+    next.keys = getKeys();
     next.updatedAt = serverTimestamp(); next.updatedBy = me.email;
     try {
       const { updatedAt, ...old } = data; await snapshot("site/home", old);
