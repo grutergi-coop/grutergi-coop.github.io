@@ -3,8 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com; frame-src https://grutergi-coop.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="theme-color" content="#1F5C3D">
 <title>공고·공시 · 그루터기 사회적협동조합</title>
-<link rel="icon" href="../assets/logo.svg" type="image/svg+xml">
+<link rel="icon" href="../assets/favicon.png" type="image/png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <link rel="stylesheet" href="../css/style.css">
 </head>
@@ -12,45 +16,46 @@
 <a class="skip" href="#main">본문으로 건너뛰기</a>
 <header class="site-header">
 <div class="wrap">
-<a class="brand" href="../"><img src="../assets/logo.svg" width="40" height="40" alt=""><span><b>그루터기</b><small>사회적협동조합</small></span></a>
+<a class="brand" href="../"><img src="../assets/logo.webp" width="44" height="44" alt=""><span><b>그루터기</b><small>사회적협동조합</small></span></a>
 <nav class="nav" aria-label="주 메뉴">
 <a href="../#about">조합 소개</a>
 <a href="../#join">함께하기</a>
 <a href="../#kids">어린이집</a>
-<a href="./" class="strong" aria-current="page">공고·공시</a>
+<a href="../#inquiry">문의</a>
+<a href="../notice/" class="strong" aria-current="page">공고·공시</a>
 </nav>
 <a class="btn-line" href="../member/">조합원 로그인</a>
 </div>
 </header>
 
 <main id="main" class="section">
-<div class="wrap" style="display:flex;flex-direction:column;gap:48px">
-<section style="display:flex;flex-direction:column;gap:16px">
-<h1 style="font-family:var(--f-head);font-size:clamp(28px,3.6vw,40px)">공고</h1>
-<p style="color:var(--muted)">이 게시판은 그루터기 사회적협동조합의 공고 장소입니다. 게시한 공고는 고치지 않으며, 바뀐 내용이 있으면 공고 아래 변경 이력에 날짜와 함께 남깁니다.</p>
+<div class="wrap stack" style="gap:48px">
+<section class="stack">
+<h1 class="h2">공고</h1>
+<p class="muted">이 게시판은 그루터기 사회적협동조합의 공고 장소입니다. 게시한 공고는 지우지 않으며, 바뀐 내용은 공고 아래 변경 이력에 날짜와 함께 남깁니다.</p>
 <div class="table-box">
 <table class="board">
 <thead><tr><th style="width:110px">번호</th><th>제목</th><th style="width:120px">상태</th><th style="width:130px">게시일</th></tr></thead>
-<tbody>
-<tr><td class="num">2026-1</td><td><a href="2026-01.html"><b>창립총회 개최 공고</b></a></td><td><span class="pill pill-live">게시 중</span></td><td class="date"><span class="fill">2026.11.25</span></td></tr>
-<tr><td class="num">안내</td><td><a href="2026-01-candidates.html">창립총회 임원 후보 등록 안내</a></td><td><span class="pill pill-info">11.27 마감</span></td><td class="date"><span class="fill">2026.11.25</span></td></tr>
-</tbody>
+<tbody id="notice-rows"><tr><td colspan="4">불러오는 중</td></tr></tbody>
 </table>
 </div>
 </section>
-<section id="docs" style="display:flex;flex-direction:column;gap:16px">
-<h2 style="font-family:var(--f-head);font-size:clamp(24px,3vw,32px)">문서함</h2>
+<section id="docs" class="stack">
+<h2 class="h2">문서함</h2>
 <div class="dash">
 <div class="card"><b>창립총회 의안</b><p>정관(안), 사업계획(안), 수입·지출 예산(안), 임원선거규약(안)</p><span class="fill" style="align-self:flex-start">[PDF 올릴 자리]</span></div>
 <div class="card"><b>양식</b><p>설립동의서, 위임장, 임원 후보 등록 신청서 (빈 양식)</p><span class="fill" style="align-self:flex-start">[PDF 올릴 자리]</span></div>
 <div class="card"><b>정관 · 규약 · 규정</b><p>설립인가를 받은 뒤 확정본을 게시합니다.</p></div>
-<div class="card"><b>결산 · 기부금 공개</b><p>회계연도가 끝난 뒤 게시합니다. 경영공시는 <a href="https://www.coop.go.kr" rel="noopener">협동조합 누리집</a>에도 올립니다.</p></div>
+<div class="card"><b>결산 · 기부금 공개</b><p>회계연도가 끝난 뒤 게시합니다. 경영공시는 <a href="https://www.coop.go.kr" rel="noopener noreferrer" target="_blank">협동조합 누리집</a>에도 올립니다.</p></div>
 </div>
 </section>
 </div>
 </main>
 <footer class="site-footer">
-<div class="wrap"><div style="display:flex;flex-direction:column;gap:6px"><b style="font-family:var(--f-head);font-size:20px">그루터기 사회적협동조합</b><span>설립 준비 중 (창립총회 2026년 12월 6일)</span></div></div>
+<div class="wrap"><div class="stack-sm"><b class="foot-brand">그루터기 사회적협동조합</b><span>설립 준비 중 (창립총회 2026년 12월 6일)</span></div>
+<nav aria-label="공고와 공시"><a href="../notice/">공고 게시판</a><a href="https://www.coop.go.kr" rel="noopener noreferrer" target="_blank">경영공시 (협동조합 누리집)</a></nav></div>
 </footer>
+<script type="module" src="../js/notices.js"></script>
+<script type="module" src="../js/track.js"></script>
 </body>
 </html>
