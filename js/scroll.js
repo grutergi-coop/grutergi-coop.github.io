@@ -33,9 +33,9 @@ function splitSay() {
 }
 // 연혁 개수만큼 나이테 고리를 그림
 function buildRings() {
-  const svg = $(".ring-art"); if (!svg) return;
-  $$("circle:not(.core)", svg).forEach((c) => c.remove());
   tlItems = $$("#timeline li");
+  const svg = $("svg.ring-art"); if (!svg) { rings = []; return; }   // 지금은 수채화 그림(img)을 씀 — SVG일 때만 고리를 그림
+  $$("circle:not(.core)", svg).forEach((c) => c.remove());
   const n = Math.max(1, tlItems.length), step = Math.min(56, 240 / n);
   rings = tlItems.map((li, i) => {
     const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -93,8 +93,10 @@ function frame() {
     items.forEach((e, i) => on(e, i === k)); pics.forEach((e, i) => on(e, i === k));
     $$("#s-vision .dots b").forEach((b, i) => { b.style.width = (clamp(p * items.length - i) * 100).toFixed(1) + "%"; });
   }
-  if (ringsSec && rings.length) {
-    const m = Math.min(rings.length - 1, Math.floor(prog(ringsSec) * rings.length * 1.05));
+  if (ringsSec && tlItems.length) {
+    // 내려갈수록 나이테 그림이 가운데부터 넓게 드러나고, 해당 연혁이 밝아짐
+    const p = prog(ringsSec), m = Math.min(tlItems.length - 1, Math.floor(p * tlItems.length * 1.05));
+    ringsSec.style.setProperty("--r", ((m + 1) / tlItems.length).toFixed(3));
     rings.forEach((c, i) => on(c, i <= m));
     tlItems.forEach((l, i) => { on(l, i <= m); l.classList.toggle("cur", i === m); });
   }
