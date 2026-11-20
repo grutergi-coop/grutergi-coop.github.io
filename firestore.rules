@@ -1,28 +1,173 @@
 rules_version = '2';
-// 그루터기 사회적협동조합 — Firestore 보안 규칙
-// members/{uid}  : 조합원 명부. 본인만 읽기, 관리자만 쓰기
-// meetings/{id}  : 총회·이사회 자료 링크. 승인된 조합원만 읽기, 관리자만 쓰기
-// admins/{uid}   : 관리자 목록. 콘솔에서 직접 추가
+// ═══════════════════════════════════════════════════════════════
+// 그루터기 사회적협동조합 — Firestore 보안 규칙 (v2, 2026-11-20)
+// 원칙: 기본은 모두 차단 · 필요한 것만 열기 · 공개 쓰기는 모양과 크기를 검사
+//
+// site/{doc}            홈 화면 내용          누구나 읽기 · 관리자만 쓰기
+// notices/{id}          공고                  게시된 것만 누구나 읽기 · 관리자만 쓰기 (삭제 불가)
+// inquiries/{id}        서면 문의             누구나 남기기(검사) · 관리자만 읽기/처리/파기
+// members/{uid}         조합원 명부           본인 신청(승인 전) · 본인 읽기 · 관리자 처리
+// admins/{uid}          관리자 목록           본인 확인만 · 콘솔에서만 추가
+// visits/{day}          방문 수               숫자를 1씩만 올릴 수 있음 · 관리자만 읽기
+// errors/{id}           오류 알림판           모양 검사 후 기록 · 관리자만 읽기
+// loginLogs/{id}        로그인 기록           본인 것만 남기기 · 관리자만 읽기 · 수정/삭제 불가
+// sessions/{uid}        접속 현황             본인 것만 갱신 · 관리자만 읽기
+// auditLog/{id}         관리자 활동 기록      관리자만 남기기/읽기 · 수정/삭제 불가
+// snapshots/{id}        타임머신(저장 전 보관) 관리자만
+// securityConfig/main   보안 설정             로그인한 사람 읽기 · 관리자만 쓰기
+// ═══════════════════════════════════════════════════════════════
 service cloud.firestore {
   match /databases/{database}/documents {
+
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid)); }
+    function verified() { return signedIn() && request.auth.token.email_verified == true; }
+    function isAdmin() {
+      return verified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
+    }
     function isApproved() {
-      return signedIn()
+      return verified()
         && exists(/databases/$(database)/documents/members/$(request.auth.uid))
         && get(/databases/$(database)/documents/members/$(request.auth.uid)).data.approved == true;
     }
-    match /members/{uid} {
-      allow read: if (signedIn() && request.auth.uid == uid) || isAdmin();
-      allow write: if isAdmin();
+    function str(v, max) { return v is string && v.size() <= max; }
+    function incOne(k) {
+      return !(k in request.resource.data.diff(resource.data).affectedKeys())
+        || request.resource.data[k] == resource.data.get(k, 0) + 1;
     }
+
+    // ── 홈 화면 내용
+    match /site/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && request.resource.data.size() < 60;
+    }
+
+    // ── 공고 (공식 공고이므로 삭제하지 않고 비공개 전환 + 변경 이력으로 관리)
+    match /notices/{id} {
+      allow read: if resource.data.published == true || isAdmin();
+      allow create, update: if isAdmin()
+        && str(request.resource.data.title, 200)
+        && request.resource.data.published is bool
+        && request.resource.data.items is list && request.resource.data.items.size() <= 30
+        && request.resource.data.history is list && request.resource.data.history.size() >= 1;
+      allow delete: if false;
+    }
+
+    // ── 서면 문의 (누구나 남김 · 내용과 크기 검사 · 처리 상태는 관리자만)
+    match /inquiries/{id} {
+      allow create: if request.resource.data.keys().hasOnly(['name','contact','category','message','agree','status','createdAt','page'])
+        && str(request.resource.data.name, 40) && request.resource.data.name.size() >= 1
+        && str(request.resource.data.contact, 100) && request.resource.data.contact.size() >= 5
+        && request.resource.data.category in ['조합 가입','어린이집','후원','기타']
+        && str(request.resource.data.message, 2000) && request.resource.data.message.size() >= 10
+        && request.resource.data.agree == true
+        && request.resource.data.status == 'new'
+        && request.resource.data.createdAt == request.time
+        && str(request.resource.data.page, 100);
+      allow read, update, delete: if isAdmin();
+    }
+
+    // ── 조합원 명부
+    match /members/{uid} {
+      allow get: if (verified() && request.auth.uid == uid) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if verified() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['email','name','approved','createdAt'])
+        && request.resource.data.approved == false
+        && request.resource.data.email == request.auth.token.email
+        && str(request.resource.data.name, 40)
+        && request.resource.data.createdAt == request.time;
+      allow update, delete: if isAdmin();
+    }
+
+    // ── 총회·이사회 자료
     match /meetings/{id} {
       allow read: if isApproved() || isAdmin();
       allow write: if isAdmin();
     }
+
+    // ── 관리자 목록 (콘솔에서만 추가)
     match /admins/{uid} {
-      allow read, write: if false;
+      allow get: if signedIn() && request.auth.uid == uid;
+      allow list, write: if false;
     }
+
+    // ── 방문 수 (하루 문서 하나 · 정해진 칸만 1씩 증가)
+    match /visits/{day} {
+      function keysOk() {
+        return request.resource.data.keys().hasOnly(['total','home','notice','member','admin','other','mobile','tablet','desktop']);
+      }
+      allow read: if isAdmin();
+      function oneOrNone(k) { return !(k in request.resource.data) || request.resource.data[k] == 1; }
+      allow create: if day.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$') && keysOk()
+        && request.resource.data.total == 1
+        && oneOrNone('home') && oneOrNone('notice') && oneOrNone('member') && oneOrNone('admin')
+        && oneOrNone('other') && oneOrNone('mobile') && oneOrNone('tablet') && oneOrNone('desktop');
+      allow update: if keysOk()
+        && request.resource.data.diff(resource.data).affectedKeys().size() <= 3
+        && incOne('total') && incOne('home') && incOne('notice') && incOne('member')
+        && incOne('admin') && incOne('other') && incOne('mobile') && incOne('tablet') && incOne('desktop');
+      allow delete: if isAdmin();
+    }
+
+    // ── 오류 알림판 (같은 오류는 문서 하나 · 횟수만 증가 · 입력 자료는 보내지 않음)
+    match /errors/{id} {
+      allow read, delete: if isAdmin();
+      allow create: if request.resource.data.keys().hasOnly(['msg','page','count','firstAt','lastAt'])
+        && str(request.resource.data.msg, 300) && str(request.resource.data.page, 100)
+        && request.resource.data.count == 1
+        && request.resource.data.firstAt == request.time && request.resource.data.lastAt == request.time;
+      allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly(['count','lastAt'])
+        && request.resource.data.count == resource.data.count + 1
+        && request.resource.data.lastAt == request.time;
+    }
+
+    // ── 로그인 기록 (본인 것만 남김 · 고칠 수 없음)
+    match /loginLogs/{id} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid','email','type','at','device','page'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.type in ['login','logout','timeout','denied']
+        && request.resource.data.at == request.time
+        && str(request.resource.data.device, 20) && str(request.resource.data.page, 100);
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── 접속 현황 (하트비트)
+    match /sessions/{uid} {
+      allow create, update: if signedIn() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['uid','email','page','device','lastSeen','role'])
+        && request.resource.data.uid == uid
+        && request.resource.data.lastSeen == request.time
+        && (request.resource.data.role == 'member' || (request.resource.data.role == 'admin' && isAdmin()));
+      allow read: if isAdmin();
+      allow delete: if (signedIn() && request.auth.uid == uid) || isAdmin();
+    }
+
+    // ── 관리자 활동 기록 (지울 수 없음)
+    match /auditLog/{id} {
+      allow create: if isAdmin()
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.at == request.time;
+      allow read: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // ── 타임머신 (저장 직전 내용 보관)
+    match /snapshots/{id} {
+      allow read, create, delete: if isAdmin();
+      allow update: if false;
+    }
+
+    // ── 보안 설정
+    match /securityConfig/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin()
+        && request.resource.data.idleMinutes is int
+        && request.resource.data.idleMinutes >= 5 && request.resource.data.idleMinutes <= 120;
+    }
+
+    // ── 그 밖의 모든 것은 차단
     match /{document=**} {
       allow read, write: if false;
     }
