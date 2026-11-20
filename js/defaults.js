@@ -1,5 +1,6 @@
 // 기본 내용 — 관리자 화면에서 "기본 내용 넣기"를 누를 때 데이터베이스에 처음 한 번 저장됩니다.
 export const HOME = {
+  introShow: true,
   stripShow: true,
   stripTag: "게시 중",
   stripText: "공고 제2026-1호 · 창립총회 개최 공고 (12월 6일 오후 6시)",
