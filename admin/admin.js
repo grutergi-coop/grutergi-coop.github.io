@@ -155,7 +155,8 @@ const HOME_TEXT = [
   ["eyebrow", "맨 위 작은 글씨", 80], ["heroTitle", "큰 제목 (줄바꿈 가능)", 80, true], ["heroText", "첫 화면 소개 글", 400, true],
   ["cta1", "첫 번째 단추 글자", 20], ["cta2", "두 번째 단추 글자", 20],
   ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
-  ["visionTitle", "비전 세 가지 제목", 60], ["valuesTitle", "네 가지 가치 제목", 60],
+  ["callRef", "시대와 부르심 · 작은 글씨", 60], ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
+  ["keysIntro", "일곱 가지 키워드 제목", 60], ["visionTitle", "비전 세 가지 제목", 60], ["valuesTitle", "네 가지 가치 제목", 60],
   ["ringsTitle", "연혁 제목", 60], ["ringsText", "연혁 설명", 300, true],
   ["joinTitle", "함께하기 제목", 60], ["joinBig", "함께하기 큰 글씨", 30], ["joinNote", "출자 안내 한 줄", 120], ["joinFoot", "함께하기 아래 안내", 200],
   ["kidsTitle", "어린이집 제목", 60], ["kidsText", "어린이집 설명", 300, true],
@@ -196,6 +197,7 @@ async function home() {
     (data[key] || HOME[key] || []).forEach((it, i) => { const g2 = el("div", { class: "grid-2" }); const a = field((i + 1) + " 제목", it.title, { max: 60 }); const b = field((i + 1) + " 설명", it.text, { max: 300, multi: true }); g2.append(a.w, b.w); p.append(g2); rows.push([a.input, b.input]); });
     return () => rows.map(([a, b]) => ({ title: a.value.trim(), text: b.value.trim() }));
   };
+  const getKeys = pair("일곱 가지 키워드 (터널 속에서 하나씩 밝아짐)", "keys");
   const getVision = pair("비전 세 가지 (스크롤하면 그림과 함께 차례로 바뀜)", "vision");
   const getValues = pair("네 가지 가치 (큰 글자 · 한 줄)", "values");
   const getMembers = pair("조합원 세 유형", "members");
@@ -218,7 +220,7 @@ async function home() {
     save.disabled = true;
     const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
-    next.vision = getVision(); next.values = getValues(); next.members = getMembers();
+    next.keys = getKeys(); next.vision = getVision(); next.values = getValues(); next.members = getMembers();
     next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
     next.kidsList = [...kBox.children].map((i) => i._get()).filter(Boolean);
     next.updatedAt = serverTimestamp(); next.updatedBy = me.email;
