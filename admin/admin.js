@@ -157,6 +157,7 @@ const HOME_TEXT = [
   ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
   ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
   ["keysIntro", "일곱 가지 키워드 제목", 60],
+  ["ringsTitle", "연혁(나이테) 제목", 60], ["ringsText", "연혁(나이테) 설명", 300, true],
   ["inquiryTitle", "문의 제목", 60], ["inquiryText", "문의 안내 글", 300, true],
   ["footNote", "맨 아래 안내", 120]
 ];
@@ -195,11 +196,22 @@ async function home() {
     return () => rows.map(([a, b]) => ({ title: a.value.trim(), text: b.value.trim() }));
   };
   const getKeys = pair("일곱 가지 키워드 (터널 속에서 하나씩 밝아짐)", "keys");
+
+  const pTl = panel("연혁 (나이테 · 내려갈수록 한 줄씩 밝아짐)"); const tlBox = el("div", { class: "repeat" }); pTl.append(tlBox);
+  const addTl = (t = { when: "", what: "", now: false }) => {
+    const item = el("div", { class: "item" }); const a = el("input", { maxlength: "30", "aria-label": "때" }); a.value = t.when;
+    const b = el("input", { maxlength: "120", "aria-label": "내용" }); b.value = t.what;
+    const c = check("지금 단계", t.now); const rm = btn("빼기", "btn-danger", () => item.remove());
+    const right = el("div", { class: "tools", style: "display:flex;gap:8px;align-items:center" }); right.append(c.w, rm);
+    item.append(a, b, right); item._get = () => ({ when: a.value.trim(), what: b.value.trim(), now: c.input.checked }); tlBox.append(item);
+  };
+  (data.timeline || HOME.timeline || []).forEach(addTl); pTl.append(btn("연혁 한 줄 더하기", null, () => addTl()));
   const save = btn("저장하기", "btn-primary", async () => {
     save.disabled = true;
     const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
     next.keys = getKeys();
+    next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
     next.updatedAt = serverTimestamp(); next.updatedBy = me.email;
     try {
       const { updatedAt, ...old } = data; await snapshot("site/home", old);
