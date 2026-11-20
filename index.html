@@ -17,19 +17,20 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
 <script src="js/daynight.js"></script>
-<link rel="stylesheet" href="css/style.css?v=20261120fx3">
+<link rel="stylesheet" href="css/style.css?v=20261120sc1">
 </head>
-<body>
+<body class="home">
 <a class="skip" href="#main">본문으로 건너뛰기</a>
 
-<header class="site-header">
+<header class="site-header" id="hdr">
 <div class="wrap">
 <a class="brand" href="./">
 <img src="assets/logo.webp" width="44" height="44" alt="">
 <span><b>그루터기</b><small>사회적협동조합</small></span>
 </a>
 <nav class="nav" aria-label="주 메뉴">
-<a href="#about">조합 소개</a>
+<a href="#about">우리의 가치</a>
+<a href="#rings">걸어온 길</a>
 <a href="#join">함께하기</a>
 <a href="#kids">어린이집</a>
 <a href="#inquiry">문의</a>
@@ -39,20 +40,14 @@
 </div>
 </header>
 
-<div class="notice-strip" id="strip" role="region" aria-label="게시 중인 공고">
-<div class="wrap">
-<span class="tag" data-k="stripTag">게시 중</span>
-<span data-k="stripText">공고 제2026-1호 · 창립총회 개최 공고 (12월 6일 오후 6시)</span>
-<a id="strip-link" href="notice/view.html?id=2026-01">공고 보기</a>
-</div>
-</div>
-
 <main id="main">
-<section class="hero">
+<section class="scene" id="s-hero">
+<div class="stick">
+<div class="hero">
 <div class="hero-fx" aria-hidden="true"></div>
 <div class="wrap">
 <div class="hero-text">
-<div class="eyebrow" data-k="eyebrow">2009년부터 · 용인 · 수원 · 화성</div>
+<a class="notice-pill" id="strip" href="notice/view.html?id=2026-01"><span class="tag" data-k="stripTag">게시 중</span><span data-k="stripText">공고 제2026-1호 · 창립총회 개최 공고 (12월 6일 오후 6시)</span></a>
 <h1 class="pre" data-k="heroTitle">그루터기에서
 다시 움이 돋습니다</h1>
 <p data-k="heroText">17년 동안 아이들을 돌봐 온 선교원이 부모와 교사가 함께 운영하는 협동어린이집으로 다시 자랍니다. 그루터기 사회적협동조합은 그 뿌리를 지키는 부모들의 모임입니다.</p>
@@ -60,39 +55,64 @@
 <a class="btn btn-primary" href="#inquiry" data-k="cta1">문의하기</a>
 <a class="btn btn-ghost" href="#join" data-k="cta2">조합원 가입 안내</a>
 </div>
+<p class="eyebrow" data-k="eyebrow">2009년부터 · 용인 · 수원 · 화성</p>
+</div>
+</div>
+<div class="hint" aria-hidden="true">아래로 내려 보세요</div>
 </div>
 </div>
 </section>
 
-<section class="section band" id="about">
+<section class="scene" id="about" aria-labelledby="say">
+<div class="stick">
 <div class="wrap">
-<div class="section-head"><h2 data-k="pillarsTitle">우리가 지키는 세 가지</h2></div>
-<div class="pillars" id="pillars">
-<div class="pillar" data-item>
-<img src="assets/icon-together.webp" alt="여러 손이 함께 새싹을 감싸는 그림" width="220" height="220" loading="lazy">
-<h3 data-t>부모가 주인입니다</h3>
-<p data-x>출자 좌수와 관계없이 한 사람 한 표. 운영 방향과 예산을 총회에서 함께 정합니다.</p>
+<blockquote class="say">
+<p id="say" data-k="sayText">지혜 있는 자는 궁창의 빛과 같이 빛날 것이요 많은 사람을 옳은 데로 돌아오게 한 자는 별과 같이 영원토록 빛나리라</p>
+<footer><cite data-k="sayRef">다니엘서 12장 3절</cite><span data-k="sayNote">다니엘 아마츠가 붙드는 중심 말씀입니다</span></footer>
+</blockquote>
 </div>
-<div class="pillar" data-item>
-<img src="assets/icon-word.webp" alt="빛나는 책 위에 나뭇잎이 놓인 그림" width="220" height="220" loading="lazy">
-<h3 data-t>성경적 세계관으로 가르칩니다</h3>
-<p data-x>국가 보육과정 위에 기독교 세계관에 기초한 보육과 교육을 더합니다.</p>
 </div>
-<div class="pillar" data-item>
-<img src="assets/icon-forest.webp" alt="두 아이가 손잡고 숲길을 걷는 뒷모습" width="220" height="220" loading="lazy">
-<h3 data-t>숲에서 자랍니다</h3>
-<p data-x>계절마다 숲에서 뛰놀며 몸과 마음을 키웁니다.</p>
+</section>
+
+<section class="scene" id="s-vision" aria-labelledby="vision-title">
+<div class="stick">
+<div class="vision">
+<div class="pics" aria-hidden="true">
+<img src="assets/icon-together.webp" alt="" width="360" height="482">
+<img src="assets/icon-word.webp" alt="" width="360" height="482">
+<img src="assets/icon-forest.webp" alt="" width="360" height="482">
+</div>
+<div class="txt">
+<h2 class="kicker" id="vision-title" data-k="visionTitle">우리가 꿈꾸는 배움터</h2>
+<div id="vision">
+<div class="item" data-item><h3 data-t>가정이 함께 입학합니다</h3><p data-x>아이만 맡기는 곳이 아닙니다. 부모가 조합원이 되어 함께 배우고, 함께 정하고, 함께 섬깁니다.</p></div>
+<div class="item" data-item><h3 data-t>거룩한 습관을 기릅니다</h3><p data-x>날마다 말씀과 기도로 하루를 열고, 말씀을 마음에 새기며 예수님의 성품을 닮아 갑니다.</p></div>
+<div class="item" data-item><h3 data-t>지혜로 세상을 섬깁니다</h3><p data-x>하나님이 지으신 숲에서 뛰놀며 배우고, 다니엘처럼 지혜와 믿음으로 세상에 선한 영향을 끼치는 사람으로 자랍니다.</p></div>
+</div>
+<div class="dots" aria-hidden="true"><i><b></b></i><i><b></b></i><i><b></b></i></div>
 </div>
 </div>
 </div>
 </section>
 
-<section class="section">
-<div class="wrap rings">
-<div class="stack">
-<h2 class="h2" data-k="ringsTitle">한 겹씩 쌓아 온 나이테</h2>
-<p class="muted" data-k="ringsText">새로 시작하는 일이 아닙니다. 17년 동안 해 오던 일에 법적인 형식을 입혀, 더 오래 더 안전하게 이어 가려는 것입니다.</p>
+<section class="section values" id="values-sec" aria-labelledby="values-title">
+<div class="wrap">
+<h2 class="h2 rise" id="values-title" data-k="valuesTitle">아이 안에 심는 네 가지</h2>
+<ul class="values-list" id="values">
+<li class="rise" data-item><b data-t>믿음</b><span data-x>믿음으로 영을 강하게</span></li>
+<li class="rise d1" data-item><b data-t>인내</b><span data-x>인내로 돌파하는 힘</span></li>
+<li class="rise d2" data-item><b data-t>겸손</b><span data-x>겸손으로 하나님 사랑, 이웃 사랑</span></li>
+<li class="rise d3" data-item><b data-t>온유</b><span data-x>온유로 땅을 얻자</span></li>
+</ul>
 </div>
+</section>
+
+<section class="scene" id="rings" aria-labelledby="rings-title">
+<div class="stick">
+<div class="rings">
+<div class="stack">
+<h2 class="h2" id="rings-title" data-k="ringsTitle">한 겹씩 쌓아 온 나이테</h2>
+<p class="muted" data-k="ringsText">새로 시작하는 일이 아닙니다. 17년 동안 해 오던 일에 법적인 형식을 입혀, 더 오래 더 안전하게 이어 가려는 것입니다.</p>
 <ol class="timeline" id="timeline">
 <li><b>2009</b><span>그루터기 선교원 개원</span></li>
 <li><b>2026. 11</b><span>학부모 설명회</span></li>
@@ -101,39 +121,41 @@
 <li><b>2028. 3</b><span>협동어린이집 개원 목표</span></li>
 </ol>
 </div>
-</section>
-
-<section class="section band" id="join">
-<div class="wrap">
-<div class="section-head">
-<h2 data-k="joinTitle">세 가지 방법으로 함께합니다</h2>
-<p data-k="joinNote">출자 1좌 50,000원 · 최소 1좌 · 탈퇴하면 돌려받습니다</p>
+<svg class="ring-art" viewBox="0 0 600 600" aria-hidden="true" focusable="false"><circle class="core" cx="300" cy="300" r="26"/></svg>
 </div>
-<div class="members" id="members">
-<div class="card" data-item><b data-t>보호자 조합원</b><p data-x>어린이집을 이용하거나 이용하려는 영유아의 보호자</p></div>
-<div class="card" data-item><b data-t>직원 조합원</b><p data-x>조합에 고용되어 아이들을 돌보는 교사와 직원</p></div>
-<div class="card" data-item><b data-t>후원자 조합원</b><p data-x>조합의 목적에 동의해 사업에 협력하고 후원하는 분</p></div>
-</div>
-<p class="foot-note" data-k="joinFoot">조합원 유형과 자격은 창립총회에서 의결하는 정관에 따라 확정됩니다.</p>
 </div>
 </section>
 
-<section class="section" id="kids">
-<div class="wrap kids">
-<img src="assets/forest-kids.webp" alt="숲속을 걷는 아이들과 교사의 뒷모습" width="880" height="550" loading="lazy">
-<div class="stack">
-<h2 class="h2" data-k="kidsTitle">2028년 봄, 협동어린이집</h2>
-<p class="muted" data-k="kidsText">조합이 설치·운영하는 어린이집은 정부 보육료 지원을 받는 정식 어린이집입니다.</p>
+<section class="scene" id="kids" aria-labelledby="kids-title">
+<div class="stick">
+<div class="photo" role="img" aria-label="숲속을 걷는 아이들과 교사의 뒷모습"></div>
+<div class="shade"></div>
+<div class="copy"><div class="wrap">
+<h2 id="kids-title" data-k="kidsTitle">2028년 봄, 협동어린이집</h2>
+<p data-k="kidsText">조합이 설치·운영하는 어린이집은 정부 보육료 지원을 받는 정식 어린이집입니다.</p>
 <ul id="kids-list">
 <li>정원 60명 규모로 계획</li>
 <li>입소 대기는 임신육아종합포털 아이사랑에서 신청</li>
 <li>개원 뒤 어린이집 정보공시는 아이사랑 포털에 게시</li>
 </ul>
-</div>
+</div></div>
 </div>
 </section>
 
-<section class="section band" id="inquiry">
+<section class="section join" id="join" aria-labelledby="join-title">
+<div class="wrap">
+<h2 class="kicker rise" id="join-title" data-k="joinTitle">세 가지 방법으로 함께합니다</h2>
+<p class="big rise" data-k="joinBig">1좌 50,000원부터</p>
+<p class="note rise d1" data-k="joinNote">출자 1좌 50,000원 · 최소 1좌 · 탈퇴하면 돌려받습니다</p>
+<div class="types" id="members">
+<div class="rise" data-item><b data-t>보호자 조합원</b><p data-x>어린이집을 이용하거나 이용하려는 영유아의 보호자</p></div>
+<div class="rise d1" data-item><b data-t>직원 조합원</b><p data-x>조합에 고용되어 아이들을 돌보는 교사와 직원</p></div>
+<div class="rise d2" data-item><b data-t>후원자 조합원</b><p data-x>조합의 목적에 동의해 사업에 협력하고 후원하는 분</p></div>
+</div>
+<p class="foot-note" data-k="joinFoot">조합원 유형과 자격은 창립총회에서 의결하는 정관에 따라 확정됩니다.</p>
+</div>
+</section>
+<section class="section ask" id="inquiry">
 <div class="wrap inquiry">
 <div class="stack">
 <h2 class="h2" data-k="inquiryTitle">서면 문의</h2>
@@ -193,7 +215,8 @@
 </div>
 </footer>
 <script type="module" src="js/ambient.js?v=3"></script>
-<script type="module" src="js/content.js"></script>
+<script type="module" src="js/content.js?v=2"></script>
+<script type="module" src="js/scroll.js?v=1"></script>
 <script type="module" src="js/inquiry.js"></script>
 <script type="module" src="js/track.js"></script>
 </body>
