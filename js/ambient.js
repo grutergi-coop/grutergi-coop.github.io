@@ -13,9 +13,7 @@ const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)
 if (hero && fx && !reduce) start();
 
 function start() {
-  const q = new URLSearchParams(location.search).get("time");
-  const h = new Date().getHours();
-  const night = q === "night" || (q !== "day" && (h >= 19 || h < 6));   // 방문자 기기 시계 기준
+  const night = document.documentElement.classList.contains("night");   // daynight.js가 화면 그리기 전에 정함
   if (night) hero.classList.add("is-night");
 
   const IMG = { w: 1280, h: 720, sprout: [0.594, 0.444], sun: [0.74, 0.15] };
@@ -38,9 +36,9 @@ function start() {
     return W >= 768 ? { x0: W * 0.46, x1: W - 20, y0: 20, y1: H * 0.85 } : { x0: 16, x1: W - 16, y0: Math.max(H * 0.5, s.y - 160), y1: H - 30 };
   }
   // 부드러운 불규칙 값: 목표값을 가끔 새로 정하고 천천히 따라감 + 잎이 떨리는 잔물결
-  function flicker(o, dt, { lo, hi, slow = [0.6, 2.2], fast = 0 }) {
+  function flicker(o, dt, { lo, hi, slow = [0.6, 2.2], fast = 0, rate = [1.2, 3.5] }) {
     o.wait -= dt;
-    if (o.wait <= 0) { o.target = Math.random() < 0.18 ? lo : rnd(lo, hi); o.wait = rnd(slow[0], slow[1]); o.rate = rnd(1.2, 3.5); }
+    if (o.wait <= 0) { o.target = Math.random() < 0.18 ? lo : rnd(lo, hi); o.wait = rnd(slow[0], slow[1]); o.rate = rnd(rate[0], rate[1]); }
     o.v += (o.target - o.v) * Math.min(1, dt * o.rate);
     o.ph += dt * rnd(6, 11);
     return clamp(o.v + (fast ? Math.sin(o.ph) * fast * Math.random() : 0), 0, 1);
@@ -64,7 +62,6 @@ function start() {
     fx.textContent = ""; items = [];
     const s = spot(IMG.sprout), A = area(), W = hero.clientWidth;
     if (night) {
-      fx.append(Object.assign(document.createElement("div"), { className: "fx-night" }));
       motes(s);
       // 반딧불이 12마리: 각자 속도·방향·쉬는 때·깜빡이는 때가 다름
       for (let i = 0; i < 12; i++) {
@@ -73,16 +70,18 @@ function start() {
           rest: 0, nextTurn: rnd(0.5, 2), turn: 0, glow: 0, phase: "off", t: rnd(0.5, 5), peak: rnd(0.35, 0.7) });
       }
     } else {
-      // 나뭇잎 햇살: 햇빛 쪽에서 비스듬히 내려오는 빛줄기 2줄 + 그림 위 빛 얼룩 7개
-      const sun = spot(IMG.sun), unit = Math.max(0.6, Math.min(1.4, W / 1200));
-      for (let i = 0; i < 2; i++) {
+      // 나뭇잎 햇살: 햇빛에서 부채꼴로 곧게 내려오는 빛줄기 6줄 + 그림 위 빛 얼룩 7개
+      const sun = spot(IMG.sun), unit = Math.max(0.6, Math.min(1.4, W / 1200)), H = hero.clientHeight;
+      const rays = [[22, 34], [30, 22], [37, 46], [45, 28], [52, 40], [60, 24]];   // [기울기(도), 굵기]
+      rays.forEach(([deg, wd], i) => {
         const el = document.createElement("div"); el.className = "fx-beam";
-        el.style.left = (sun.x - 40 + i * 70) + "px"; el.style.top = (sun.y - 60) + "px";
-        el.style.width = (90 + i * 60) * unit + "px"; el.style.height = hero.clientHeight * 1.4 + "px";
-        el.style.transform = `rotate(${28 + i * 6}deg)`;
+        const w = wd * unit * rnd(0.85, 1.2), len = H * rnd(1.1, 1.6);
+        el.style.width = w + "px"; el.style.height = len + "px";
+        el.style.left = (sun.x - w / 2 + rnd(-30, 30)) + "px"; el.style.top = (sun.y - 20) + "px";
+        el.style.transform = `rotate(${deg + rnd(-3, 3)}deg)`;
         fx.append(el);
-        items.push({ kind: "beam", el, f: { v: 0.3, target: 0.4, wait: 0, rate: 2, ph: 0 } });
-      }
+        items.push({ kind: "beam", el, f: { v: rnd(0.1, 0.4), target: 0.3, wait: rnd(0, 3), rate: 0.4, ph: 0 } });
+      });
       const pts = [[0.70, 0.30], [0.80, 0.45], [0.62, 0.40], [0.88, 0.25], [0.66, 0.58], [0.76, 0.62], [0.56, 0.22]];
       pts.forEach(([px, py]) => {
         const p = spot([px + rnd(-0.03, 0.03), py + rnd(-0.03, 0.03)]);
@@ -123,12 +122,12 @@ function start() {
         it.el.style.opacity = (0.03 + it.glow * it.peak).toFixed(3);
         it.el.style.transform = `translate(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px)`;
       } else if (it.kind === "sun") {
-        const v = flicker(it.f, dt, { lo: 0.05, hi: 0.9, slow: [0.5, 2.4], fast: 0.12 });
-        const dx = Math.sin(t * it.wx + it.p0) * 6, dy = Math.cos(t * it.wy + it.p0) * 4;   // 잎이 흔들려 빛이 살짝 옮겨감
+        const v = flicker(it.f, dt, { lo: 0.08, hi: 0.85, slow: [3, 7], rate: [0.25, 0.6] });   // 천천히 밝아지고 천천히 가려짐
+        const dx = Math.sin(t * it.wx * 0.5 + it.p0) * 6, dy = Math.cos(t * it.wy * 0.5 + it.p0) * 4;   // 잎이 흔들려 빛이 살짝 옮겨감
         it.el.style.opacity = v.toFixed(3);
         it.el.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${it.rot}deg)`;
       } else if (it.kind === "beam") {
-        it.el.style.opacity = flicker(it.f, dt, { lo: 0.12, hi: 0.55, slow: [1.2, 3.5], fast: 0.05 }).toFixed(3);
+        it.el.style.opacity = flicker(it.f, dt, { lo: 0.12, hi: 0.75, slow: [4, 9], rate: [0.2, 0.45] }).toFixed(3);
       }
     }
     raf = requestAnimationFrame(tick);
