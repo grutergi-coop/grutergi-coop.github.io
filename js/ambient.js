@@ -1,4 +1,6 @@
-// 첫 화면 빛 효과 — 새싹에서 피어오르는 빛 알갱이 + 낮에는 노란 나비, 밤에는 반딧불이
+// 첫 화면 빛 효과 — 새싹에서 피어오르는 빛 알갱이
+//   낮: 나뭇잎 사이로 햇살이 비쳤다 가려졌다 하는 빛 얼룩과 빛줄기
+//   밤(저녁 7시~새벽 6시): 은은하게 깜빡이며 제멋대로 떠다니는 반딧불이
 // 화면을 가리지 않음 · 글자 아래 그림 위에서만 움직임 · '동작 줄이기' 존중 · 화면 밖이거나 다른 탭이면 멈춤
 // 관리자 화면 › 홈 화면 › "첫 화면 빛 효과"로 켜고 끔. 확인용: 주소 끝에 ?time=day 또는 ?time=night
 import { db } from "./fb.js";
@@ -13,34 +15,38 @@ if (hero && fx && !reduce) start();
 function start() {
   const q = new URLSearchParams(location.search).get("time");
   const h = new Date().getHours();
-  const night = q === "night" || (q !== "day" && (h >= 19 || h < 6));   // 방문자 기기 시계 기준 저녁 7시~새벽 6시
+  const night = q === "night" || (q !== "day" && (h >= 19 || h < 6));   // 방문자 기기 시계 기준
   if (night) hero.classList.add("is-night");
 
-  const IMG = { w: 1280, h: 720, sprout: [0.594, 0.444] };
+  const IMG = { w: 1280, h: 720, sprout: [0.594, 0.444], sun: [0.74, 0.15] };
   const rnd = (a, b) => a + Math.random() * (b - a);
-  let raf = 0, running = false, flyers = [];
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  let raf = 0, running = false, last = 0, items = [];
 
-  // 배경 그림에서 새싹이 지금 화면 어디에 있는지 계산 (화면 크기마다 그림 배치가 다름)
+  // 배경 그림의 한 점이 지금 화면 어디에 있는지 (화면 크기마다 그림 배치가 다름)
   function spot([px, py]) {
     const W = hero.clientWidth, H = hero.clientHeight, cs = getComputedStyle(hero);
     let iw, ih;
     if (cs.backgroundSize === "cover") { const s = Math.max(W / IMG.w, H / IMG.h); iw = IMG.w * s; ih = IMG.h * s; }
     else { const m = cs.backgroundSize.match(/auto\s+([\d.]+)%/); ih = H * (m ? +m[1] / 100 : 1); iw = ih * IMG.w / IMG.h; }
     const pos = cs.backgroundPosition.split(" ").map((v) => parseFloat(v) / 100);
-    return { x: (W - iw) * pos[0] + px * iw, y: (H - ih) * pos[1] + py * ih, iw, ih, left: (W - iw) * pos[0], top: (H - ih) * pos[1] };
+    return { x: (W - iw) * pos[0] + px * iw, y: (H - ih) * pos[1] + py * ih, iw, ih };
   }
-  // 날아다닐 영역: 그림이 보이는 부분(글자 쪽은 피함)
+  // 움직일 영역: 그림이 보이는 부분(글자 쪽은 피함)
   function area() {
     const W = hero.clientWidth, H = hero.clientHeight, s = spot(IMG.sprout);
-    const wide = W >= 768;
-    return wide ? { x0: W * 0.46, x1: W - 20, y0: 20, y1: H * 0.8 } : { x0: 16, x1: W - 16, y0: Math.max(H * 0.5, s.y - 160), y1: H - 30 };
+    return W >= 768 ? { x0: W * 0.46, x1: W - 20, y0: 20, y1: H * 0.85 } : { x0: 16, x1: W - 16, y0: Math.max(H * 0.5, s.y - 160), y1: H - 30 };
+  }
+  // 부드러운 불규칙 값: 목표값을 가끔 새로 정하고 천천히 따라감 + 잎이 떨리는 잔물결
+  function flicker(o, dt, { lo, hi, slow = [0.6, 2.2], fast = 0 }) {
+    o.wait -= dt;
+    if (o.wait <= 0) { o.target = Math.random() < 0.18 ? lo : rnd(lo, hi); o.wait = rnd(slow[0], slow[1]); o.rate = rnd(1.2, 3.5); }
+    o.v += (o.target - o.v) * Math.min(1, dt * o.rate);
+    o.ph += dt * rnd(6, 11);
+    return clamp(o.v + (fast ? Math.sin(o.ph) * fast * Math.random() : 0), 0, 1);
   }
 
-  function build() {
-    fx.textContent = ""; flyers = [];
-    if (night) fx.append(Object.assign(document.createElement("div"), { className: "fx-night" }));
-    const s = spot(IMG.sprout);
-    // 빛 알갱이
+  function motes(s) {
     for (let i = 0; i < 9; i++) {
       const m = document.createElement("i"); m.className = "fx-mote";
       m.style.left = (s.x + rnd(-24, 24)) + "px"; m.style.top = (s.y + rnd(-10, 20)) + "px";
@@ -52,47 +58,85 @@ function start() {
       m.style.setProperty("--o", rnd(0.55, 0.9).toFixed(2));
       fx.append(m);
     }
-    const A = area();
+  }
+
+  function build() {
+    fx.textContent = ""; items = [];
+    const s = spot(IMG.sprout), A = area(), W = hero.clientWidth;
     if (night) {
-      // 반딧불이: 천천히 떠다니며 깜빡임
+      fx.append(Object.assign(document.createElement("div"), { className: "fx-night" }));
+      motes(s);
+      // 반딧불이 12마리: 각자 속도·방향·쉬는 때·깜빡이는 때가 다름
       for (let i = 0; i < 12; i++) {
-        const f = document.createElement("i"); f.className = "fx-fly";
-        f.style.setProperty("--d", rnd(1.6, 3.4).toFixed(2) + "s");
-        f.style.setProperty("--dl", rnd(0, 3).toFixed(2) + "s");
-        fx.append(f);
-        flyers.push({ el: f, kind: "fly", cx: rnd(A.x0, A.x1), cy: rnd(A.y0, A.y1), ax: rnd(30, 90), ay: rnd(20, 60), fx: rnd(0.08, 0.22), fy: rnd(0.07, 0.2), ph: rnd(0, 6.28), ph2: rnd(0, 6.28) });
+        const el = document.createElement("i"); el.className = "fx-fly"; fx.append(el);
+        items.push({ kind: "fly", el, A, x: rnd(A.x0, A.x1), y: rnd(A.y0, A.y1), ang: rnd(0, 6.28), sp: rnd(6, 16), want: rnd(6, 16),
+          rest: 0, nextTurn: rnd(0.5, 2), turn: 0, glow: 0, phase: "off", t: rnd(0.5, 5), peak: rnd(0.35, 0.7) });
       }
     } else {
-      // 노란 나비 두 마리: 날개를 팔랑이며 그림 위를 돌아다님
+      // 나뭇잎 햇살: 햇빛 쪽에서 비스듬히 내려오는 빛줄기 2줄 + 그림 위 빛 얼룩 7개
+      const sun = spot(IMG.sun), unit = Math.max(0.6, Math.min(1.4, W / 1200));
       for (let i = 0; i < 2; i++) {
-        const b = document.createElement("div"); b.className = "fx-bfly";
-        b.innerHTML = '<svg viewBox="0 0 40 32"><g class="w l"><path d="M20 15 C14 2 3 1 2 8 C1 14 9 17 20 17Z"/><path d="M20 17 C12 18 6 24 9 28 C12 31 18 25 20 18Z"/></g><g class="w r"><path d="M20 15 C26 2 37 1 38 8 C39 14 31 17 20 17Z"/><path d="M20 17 C28 18 34 24 31 28 C28 31 22 25 20 18Z"/></g><path class="body" d="M19.3 10 Q20 8.5 20.7 10 L20.6 25 Q20 26.5 19.4 25Z"/></svg>';
-        b.style.setProperty("--flap", rnd(0.22, 0.3).toFixed(2) + "s");
-        fx.append(b);
-        flyers.push({ el: b, kind: "bfly", cx: (A.x0 + A.x1) / 2 + rnd(-60, 60), cy: (A.y0 + A.y1) / 2 + rnd(-40, 40), ax: (A.x1 - A.x0) * rnd(0.32, 0.42), ay: (A.y1 - A.y0) * rnd(0.28, 0.38), fx: rnd(0.05, 0.08), fy: rnd(0.09, 0.14), ph: rnd(0, 6.28), ph2: rnd(0, 6.28), px: 0, py: 0 });
+        const el = document.createElement("div"); el.className = "fx-beam";
+        el.style.left = (sun.x - 40 + i * 70) + "px"; el.style.top = (sun.y - 60) + "px";
+        el.style.width = (90 + i * 60) * unit + "px"; el.style.height = hero.clientHeight * 1.4 + "px";
+        el.style.transform = `rotate(${28 + i * 6}deg)`;
+        fx.append(el);
+        items.push({ kind: "beam", el, f: { v: 0.3, target: 0.4, wait: 0, rate: 2, ph: 0 } });
       }
+      const pts = [[0.70, 0.30], [0.80, 0.45], [0.62, 0.40], [0.88, 0.25], [0.66, 0.58], [0.76, 0.62], [0.56, 0.22]];
+      pts.forEach(([px, py]) => {
+        const p = spot([px + rnd(-0.03, 0.03), py + rnd(-0.03, 0.03)]);
+        const el = document.createElement("i"); el.className = "fx-sun";
+        const w = rnd(110, 220) * unit, hgt = w * rnd(0.55, 0.85);
+        el.style.width = w + "px"; el.style.height = hgt + "px";
+        el.style.left = (p.x - w / 2) + "px"; el.style.top = (p.y - hgt / 2) + "px";
+        const rot = rnd(-25, 25); el.style.transform = `rotate(${rot}deg)`;
+        fx.append(el);
+        items.push({ kind: "sun", el, rot, f: { v: rnd(0, 0.5), target: 0, wait: 0, rate: 2, ph: rnd(0, 6) }, dx: 0, dy: 0, wx: rnd(0.1, 0.3), wy: rnd(0.1, 0.3), p0: rnd(0, 6) });
+      });
+      motes(s);
     }
   }
 
-  // 여러 사인 곡선을 겹쳐 불규칙하지만 부드럽게 움직이게
   function tick(now) {
+    const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
     const t = now / 1000;
-    for (const f of flyers) {
-      const x = f.cx + f.ax * Math.sin(t * f.fx * 6.28 + f.ph) + f.ax * 0.35 * Math.sin(t * f.fx * 2.3 * 6.28 + f.ph2);
-      const y = f.cy + f.ay * Math.sin(t * f.fy * 6.28 + f.ph2) + f.ay * 0.3 * Math.cos(t * f.fy * 1.7 * 6.28 + f.ph);
-      if (f.kind === "bfly") {
-        const ang = Math.max(-25, Math.min(25, (x - f.px) * 6));
-        f.el.style.transform = `translate(${x}px,${y}px) rotate(${ang}deg)`;
-        f.px = x; f.py = y;
-      } else f.el.style.transform = `translate(${x}px,${y}px)`;
+    for (const it of items) {
+      if (it.kind === "fly") {
+        // 방향을 가끔 바꾸고, 가끔 멈춰 떠 있다가 다시 날아감
+        it.nextTurn -= dt;
+        if (it.nextTurn <= 0) { it.turn = rnd(-1.6, 1.6); it.nextTurn = rnd(0.4, 2.5); it.want = Math.random() < 0.2 ? rnd(0.5, 2) : rnd(5, 20); }
+        it.ang += it.turn * dt + rnd(-0.6, 0.6) * dt;
+        it.sp += (it.want - it.sp) * Math.min(1, dt * 1.5);
+        const A = it.A, cx = (A.x0 + A.x1) / 2, cy = (A.y0 + A.y1) / 2;
+        if (it.x < A.x0 || it.x > A.x1 || it.y < A.y0 || it.y > A.y1) {   // 영역 밖이면 부드럽게 안쪽으로
+          const to = Math.atan2(cy - it.y, cx - it.x); let d = to - it.ang;
+          d = Math.atan2(Math.sin(d), Math.cos(d)); it.ang += d * Math.min(1, dt * 2);
+        }
+        it.x += Math.cos(it.ang) * it.sp * dt; it.y += Math.sin(it.ang) * it.sp * dt + Math.sin(t * 1.3 + it.peak * 9) * 2 * dt;
+        // 깜빡임: 꺼져 있다가 → 천천히 켜지고 → 잠시 머물고 → 천천히 꺼짐 (반딧불이마다 다른 박자)
+        it.t -= dt;
+        if (it.phase === "off" && it.t <= 0) { it.phase = "up"; it.t = rnd(0.4, 0.9); }
+        else if (it.phase === "up") { it.glow = Math.min(1, it.glow + dt / 0.6); if (it.t <= 0) { it.phase = "hold"; it.t = rnd(0.3, 1.4); } }
+        else if (it.phase === "hold" && it.t <= 0) { it.phase = "down"; }
+        else if (it.phase === "down") { it.glow = Math.max(0, it.glow - dt / 1.1); if (it.glow <= 0) { it.phase = "off"; it.t = rnd(1.5, 6); it.peak = rnd(0.35, 0.7); } }
+        it.el.style.opacity = (0.03 + it.glow * it.peak).toFixed(3);
+        it.el.style.transform = `translate(${it.x.toFixed(1)}px,${it.y.toFixed(1)}px)`;
+      } else if (it.kind === "sun") {
+        const v = flicker(it.f, dt, { lo: 0.05, hi: 0.9, slow: [0.5, 2.4], fast: 0.12 });
+        const dx = Math.sin(t * it.wx + it.p0) * 6, dy = Math.cos(t * it.wy + it.p0) * 4;   // 잎이 흔들려 빛이 살짝 옮겨감
+        it.el.style.opacity = v.toFixed(3);
+        it.el.style.transform = `translate(${dx.toFixed(1)}px,${dy.toFixed(1)}px) rotate(${it.rot}deg)`;
+      } else if (it.kind === "beam") {
+        it.el.style.opacity = flicker(it.f, dt, { lo: 0.12, hi: 0.55, slow: [1.2, 3.5], fast: 0.05 }).toFixed(3);
+      }
     }
     raf = requestAnimationFrame(tick);
   }
-  function play() { if (running) return; running = true; fx.classList.remove("paused"); raf = requestAnimationFrame(tick); }
+  function play() { if (running) return; running = true; last = 0; fx.classList.remove("paused"); raf = requestAnimationFrame(tick); }
   function pause() { running = false; cancelAnimationFrame(raf); fx.classList.add("paused"); }
 
   build(); play();
-  // 화면 밖·다른 탭에서는 멈춰 배터리 아끼기
   if ("IntersectionObserver" in window) new IntersectionObserver((es) => es.forEach((e) => (e.isIntersecting && !document.hidden ? play() : pause()))).observe(hero);
   document.addEventListener("visibilitychange", () => (document.hidden ? pause() : play()));
   let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(build, 250); });
