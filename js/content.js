@@ -26,9 +26,10 @@ try {
     const strip = $("#strip");
     if (strip) {
       strip.hidden = h.stripShow === false;
-      const a = $("#strip-link"); if (a && h.stripLink) a.setAttribute("href", safeHref(h.stripLink));
+      const a = $("#strip-link") || strip; if (a && h.stripLink) a.setAttribute("href", safeHref(h.stripLink));
     }
-    fillPairs($("#pillars"), h.pillars);
+    fillPairs($("#vision"), h.vision);
+    fillPairs($("#values"), h.values);
     fillPairs($("#members"), h.members);
     if (Array.isArray(h.timeline)) {
       const ol = $("#timeline"); ol.textContent = "";
@@ -46,3 +47,5 @@ try {
 } catch (e) {
   // 연결 실패 시 기본 HTML 내용 유지
 }
+// 스크롤 연출(scroll.js)에 내용이 다 채워졌다고 알림 — 문장 나누기·나이테 고리를 다시 그림
+document.dispatchEvent(new Event("home:filled"));
