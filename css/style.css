@@ -60,7 +60,14 @@ p{margin:0}
 
 /* 히어로 */
 .hero{position:relative;background:#EEF3EC url("../assets/hero.webp") right center/cover no-repeat;min-height:clamp(480px,62vh,640px);display:flex;align-items:center;overflow:hidden}
-.hero::before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(247,250,245,.96) 0%,rgba(247,250,245,.88) 38%,rgba(247,250,245,0) 70%)}
+.hero::before{content:"";position:absolute;top:0;right:0;bottom:0;left:0;background:linear-gradient(90deg,rgba(247,250,245,.96) 0%,rgba(247,250,245,.88) 38%,rgba(247,250,245,0) 70%)}
+/* 넓은 화면: 그림 위쪽(나뭇잎)이 잘리지 않게 위쪽 기준으로 놓고, 높이를 화면 폭에 맞춰 키움 */
+@media (min-width:1024px){.hero{background-position:right 8%;min-height:clamp(520px,44vw,780px)}}
+/* 밤: 같은 구도의 밤 그림으로 바꾸고, 글자 쪽 안개를 푸르스름하게 */
+.night .hero{background-image:url("../assets/hero-night.webp");background-color:#1d2f33}
+.night .hero::before{background:linear-gradient(90deg,rgba(236,242,241,.96) 0%,rgba(236,242,241,.86) 38%,rgba(236,242,241,0) 70%)}
+@media (min-width:768px) and (max-width:1023px){.night .hero::before{background:linear-gradient(90deg,rgba(236,242,241,.97) 0%,rgba(236,242,241,.9) 50%,rgba(236,242,241,.1) 85%)}}
+@media (max-width:767px){.night .hero{background-color:#ECF2F1}.night .hero::before{background:linear-gradient(180deg,rgba(236,242,241,.98) 58%,rgba(236,242,241,0) 88%)}}
 .hero .wrap{position:relative;width:100%;padding-block:clamp(48px,8vw,80px)}
 .hero-text{max-width:560px;display:flex;flex-direction:column;gap:clamp(16px,2vw,22px)}
 .eyebrow{font-size:15px;font-weight:700;color:var(--amber-text);letter-spacing:.04em}
@@ -237,7 +244,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--green);outline:2px so
 @keyframes fxRise{0%{opacity:0;transform:translate(0,0) scale(.6)}15%{opacity:var(--o,.85)}100%{opacity:0;transform:translate(var(--dx,20px),var(--dy,-160px)) scale(1)}}
 .fx-fly{position:absolute;left:0;top:0;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#EEFFB8;box-shadow:0 0 7px 3px rgba(200,240,100,.5),0 0 16px 6px rgba(180,230,80,.14);opacity:.03;will-change:transform,opacity}
 .fx-sun{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(255,246,214,.62),rgba(255,236,184,.3) 55%,rgba(255,236,184,0));mix-blend-mode:screen;opacity:0;will-change:opacity,transform}
-.fx-beam{position:absolute;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,243,205,.5),rgba(255,240,200,.18) 55%,rgba(255,240,200,0));-webkit-filter:blur(10px);filter:blur(10px);mix-blend-mode:screen;opacity:0}
+.fx-beam{position:absolute;transform-origin:50% 0;background:linear-gradient(180deg,rgba(255,247,218,.9),rgba(255,242,205,.42) 45%,rgba(255,240,200,0) 92%);-webkit-mask-image:linear-gradient(90deg,transparent,#000 35%,#000 65%,transparent);mask-image:linear-gradient(90deg,transparent,#000 35%,#000 65%,transparent);-webkit-filter:blur(1.5px);filter:blur(1.5px);mix-blend-mode:screen;opacity:0;will-change:opacity}
 @media (max-width:767px){.fx-night{background:linear-gradient(180deg,rgba(18,40,44,0) 48%,rgba(18,40,44,.4) 72%,rgba(12,30,36,.55) 100%)}}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
