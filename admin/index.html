@@ -3,15 +3,19 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com; frame-src https://grutergi-coop.firebaseapp.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com; frame-src https://grutergi-coop.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<meta name="theme-color" content="#1F5C3D">
+<meta name="theme-color" content="#1C263A">
+<meta name="apple-mobile-web-app-title" content="그루터기 관리">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="robots" content="noindex, nofollow">
 <title>관리자 · 그루터기 사회적협동조합</title>
 <link rel="icon" href="../assets/favicon.png" type="image/png">
-<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="apple-touch-icon" href="../assets/admin-apple-touch-icon.png?v=2">
+<link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="../css/style.css">
+<link rel="stylesheet" href="../css/style.css?v=20261121a1">
 </head>
 <body>
 <a class="skip" href="#main">본문으로 건너뛰기</a>
@@ -28,13 +32,23 @@
 
 <section class="member-box" id="login">
 <h1 class="h2" style="font-size:28px">관리자 로그인</h1>
-<p class="muted">관리자 이메일로 로그인 링크를 받습니다. 브라우저를 닫거나 일정 시간 움직임이 없으면 자동으로 로그아웃됩니다.</p>
-<form id="login-form" class="stack" style="gap:12px">
-<label for="email">관리자 이메일</label>
-<input id="email" name="email" type="email" autocomplete="email" required>
-<button class="btn btn-primary" type="submit">로그인 링크 받기</button>
-</form>
+<p class="muted">관리자로 등록된 Google 계정으로 로그인한 뒤, 6자리 PIN을 한 번 더 입력합니다. 앱을 다시 열거나 일정 시간 움직임이 없으면 PIN을 다시 묻습니다.</p>
+<button class="btn btn-primary" id="google" type="button">Google 계정으로 로그인</button>
 <p class="msg" id="login-msg" role="status" hidden></p>
+</section>
+
+<section class="member-box" id="pin" hidden>
+<h1 class="h2" style="font-size:26px" id="pin-title">PIN 입력</h1>
+<p class="muted" id="pin-help">관리자 PIN 6자리를 입력하세요.</p>
+<form id="pin-form" class="stack" style="gap:12px" autocomplete="off">
+<label for="pin1">PIN 6자리</label>
+<input id="pin1" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autocomplete="off" required>
+<div id="pin2-wrap" hidden><label for="pin2">한 번 더 입력</label>
+<input id="pin2" type="password" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" minlength="6" autocomplete="off"></div>
+<button class="btn btn-primary" type="submit" id="pin-go">확인</button>
+</form>
+<p class="msg" id="pin-msg" role="status" hidden></p>
+<p class="sub"><button type="button" class="linklike" id="pin-mode">처음이신가요? PIN 만들기</button> · <button type="button" class="linklike" id="pin-out">다른 계정으로 로그인</button></p>
 </section>
 
 <section class="member-box" id="denied" hidden>
@@ -56,7 +70,7 @@
 </div>
 </main>
 <div class="toast" id="toast" role="status" hidden></div>
-<script type="module" src="admin.js?v=6"></script>
+<script type="module" src="admin.js?v=7"></script>
 <script type="module" src="../js/track.js"></script>
 </body>
 </html>

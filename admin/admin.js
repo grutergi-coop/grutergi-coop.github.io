@@ -5,7 +5,7 @@
 // 모든 내용은 글자로만 넣습니다(HTML 해석 없음). 저장 직전 내용은 타임머신(snapshots)에 보관합니다.
 // ═══════════════════════════════════════════════════════════════
 import { auth, db, el } from "../js/fb.js";
-import { usePersistence, sendLink, finishLinkIfAny, startSession, endSession, logLogin } from "../js/session.js";
+import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSession, logLogin } from "../js/session.js";
 import { HOME, NOTICES } from "../js/defaults.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -72,17 +72,59 @@ function timeMachine(target, onRestore) {
   });
 }
 
-// ── 로그인
-await usePersistence("admin");
-await finishLinkIfAny(say);
-$("login-form").addEventListener("submit", (e) => { e.preventDefault(); sendLink($("email").value.trim(), say); });
-$("logout").addEventListener("click", async () => { await endSession(me, "logout"); location.reload(); });
+// ── 로그인: Google 계정 → 6자리 PIN (PIN을 맞혀야 서버가 관리자 권한을 12시간 열어 줌, 보안 규칙 v3)
+await usePersistence("member");   // Google 로그인은 이 기기에 유지 · 대신 앱을 열 때마다 PIN을 다시 물음
+const pinSay = (t, ok) => { const m = $("pin-msg"); m.textContent = t; m.className = "msg " + (ok ? "msg-ok" : "msg-err"); m.hidden = false; };
+let pinCreate = false, fails = 0, waitUntil = 0;
+function setPinMode(create) {
+  pinCreate = create;
+  $("pin-title").textContent = create ? "PIN 만들기" : "PIN 입력";
+  $("pin-help").textContent = create ? "처음 한 번만 만듭니다. 생일·전화번호·같은 숫자 반복은 피해 주세요." : "관리자 PIN 6자리를 입력하세요.";
+  $("pin2-wrap").hidden = !create; $("pin2").required = create;
+  $("pin-mode").textContent = create ? "이미 PIN이 있어요" : "처음이신가요? PIN 만들기";
+  $("pin-msg").hidden = true; $("pin1").value = ""; $("pin2").value = "";
+}
+$("google").addEventListener("click", () => googleSignIn(say));
+$("pin-mode").addEventListener("click", () => setPinMode(!pinCreate));
+$("pin-out").addEventListener("click", async () => { await endSession(me, "logout"); location.reload(); });
+$("logout").addEventListener("click", async () => { await lockAdmin(me, "logout"); await endSession(me, "logout"); location.reload(); });
+
+const weak = (p) => /^(\d)\1{5}$/.test(p) || "0123456789012".includes(p) || "9876543210987".includes(p);
+$("pin-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  if (Date.now() < waitUntil) return pinSay("잠시 후 다시 시도해 주세요.", false);
+  const a = $("pin1").value.trim(), b = $("pin2").value.trim();
+  if (!/^\d{6}$/.test(a)) return pinSay("숫자 6자리를 입력해 주세요.", false);
+  const proof = await pinProof(me.uid, a);
+  if (pinCreate) {
+    if (a !== b) return pinSay("두 번 입력한 PIN이 다릅니다.", false);
+    if (weak(a)) return pinSay("너무 쉬운 PIN입니다. 다른 숫자로 만들어 주세요.", false);
+    try { await setDoc(doc(db, "adminPins", me.uid), { h: proof, at: serverTimestamp() }); }
+    catch { setPinMode(false); return pinSay("이미 PIN이 있습니다. PIN을 입력해 주세요.", false); }
+  }
+  try {
+    await setDoc(doc(db, "adminUnlock", me.uid), { p: proof, at: serverTimestamp() });
+    fails = 0; try { sessionStorage.setItem("grUnlock-" + me.uid, String(Date.now())); } catch {}
+    $("pin").hidden = true; enterApp();
+  } catch {
+    fails++;
+    if (fails >= 5) { waitUntil = Date.now() + 60 * 1000 * Math.min(10, fails - 4); pinSay("PIN이 여러 번 틀렸습니다. 잠시 후 다시 시도해 주세요.", false); }
+    else pinSay("PIN이 맞지 않습니다.", false);
+    try { logLogin(me, "denied"); } catch {}
+  }
+});
+
+// 서버의 관리자 권한(PIN 확인)이 아직 살아 있는지 — 관리자만 읽을 수 있는 자료를 하나 읽어 봄
+async function stillUnlocked() {
+  try { await getDocs(query(collection(db, "inquiries"), limit(1))); return true; } catch { return false; }
+}
 
 onAuthStateChanged(auth, async (user) => {
   me = user;
   $("logout").hidden = !user;
   $("who").textContent = user ? user.email : "";
-  if (!user) { $("login").hidden = false; $("denied").hidden = true; $("app").hidden = true; return; }
+  $("app").hidden = true; $("pin").hidden = true; $("denied").hidden = true;
+  if (!user) { $("login").hidden = false; return; }
   $("login").hidden = true;
   const ok = await getDoc(doc(db, "admins", user.uid)).then((s) => s.exists()).catch(() => false);
   if (!ok) {
@@ -90,10 +132,18 @@ onAuthStateChanged(auth, async (user) => {
     try { if (!sessionStorage.getItem("gr-denied")) { sessionStorage.setItem("gr-denied", "1"); logLogin(user, "denied"); } } catch {}
     return;
   }
-  $("app").hidden = false;
-  startSession(user, "admin", (mins) => { location.reload(); });
-  bindTabs(); go("dash"); refreshInqBadge();
+  let flag = null; try { flag = sessionStorage.getItem("grUnlock-" + user.uid); } catch {}
+  if (flag && await stillUnlocked()) return enterApp();
+  setPinMode(false); $("pin").hidden = false; setTimeout(() => $("pin1").focus(), 50);
 });
+
+let entered = false;
+function enterApp() {
+  $("app").hidden = false;
+  startSession(me, "admin", () => { location.reload(); });
+  if (!entered) { entered = true; bindTabs(); }
+  go("dash"); refreshInqBadge();
+}
 
 function bindTabs() {
   document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.onclick = () => go(b.dataset.tab));
@@ -423,13 +473,26 @@ async function sec() {
   if (secTab === "conf") {
     const s = await getDoc(doc(db, "securityConfig", "main")).catch(() => null);
     const cur = s && s.exists() ? s.data().idleMinutes : 30;
-    const f = field("자동 로그아웃까지 시간(분)", cur, { type: "number", help: "5~120분. 관리자와 조합원 화면 모두에 적용됩니다. 관리자는 브라우저를 닫아도 로그아웃됩니다." });
+    const f = field("자동 로그아웃까지 시간(분)", cur, { type: "number", help: "5~120분. 관리자와 조합원 화면 모두에 적용됩니다. 관리자는 시간이 지나면 PIN을 다시 묻습니다." });
     p.append(f.w, btn("저장하기", "btn-primary", async () => {
       const v = parseInt(f.input.value, 10); if (!(v >= 5 && v <= 120)) return toast("5~120 사이로 적어 주세요");
       try { await setDoc(doc(db, "securityConfig", "main"), { idleMinutes: v }); await audit("보안 설정", "securityConfig/main", v + "분"); toast("저장했습니다"); } catch (e) { toast("저장하지 못했습니다"); }
     }));
+    p.append(el("h3", null, "PIN 바꾸기"));
+    const n1 = field("새 PIN 6자리", "", { type: "password" }), n2 = field("한 번 더", "", { type: "password" });
+    [n1, n2].forEach((f) => { f.input.inputMode = "numeric"; f.input.maxLength = 6; f.input.autocomplete = "off"; });
+    p.append(n1.w, n2.w, btn("PIN 바꾸기", "btn-primary", async () => {
+      const a = n1.input.value.trim();
+      if (!/^\d{6}$/.test(a) || a !== n2.input.value.trim()) return toast("숫자 6자리를 두 번 똑같이 입력해 주세요");
+      const proof = await pinProof(me.uid, a);
+      try {
+        await setDoc(doc(db, "adminPins", me.uid), { h: proof, at: serverTimestamp() });
+        await setDoc(doc(db, "adminUnlock", me.uid), { p: proof, at: serverTimestamp() });
+        await audit("PIN 변경", "adminPins/" + me.uid); n1.input.value = ""; n2.input.value = ""; toast("PIN을 바꿨습니다");
+      } catch { toast("바꾸지 못했습니다. 다시 로그인해 주세요"); }
+    }));
     p.append(el("h3", null, "관리자 추가 방법"));
-    p.append(el("p", { class: "sub" }, "새 관리자가 이 화면에서 한 번 로그인하면 ‘관리자 권한이 없습니다’와 함께 UID가 보입니다. 파이어베이스 콘솔 › Firestore › admins 컬렉션에 그 UID로 문서를 만들면 관리자가 됩니다. 보안을 위해 관리자 추가는 이 화면에서 할 수 없습니다."));
+    p.append(el("p", { class: "sub" }, "새 관리자가 이 화면에서 Google 계정으로 한 번 로그인하면 ‘관리자 권한이 없습니다’와 함께 UID가 보입니다. 파이어베이스 콘솔 › Firestore › admins 컬렉션에 그 UID로 문서를 만들면 관리자가 됩니다. 보안을 위해 관리자 추가는 이 화면에서 할 수 없습니다."));
     p.append(el("p", { class: "code" }, "내 UID: " + me.uid));
   }
 }
