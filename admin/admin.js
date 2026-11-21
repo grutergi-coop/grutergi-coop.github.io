@@ -22,26 +22,79 @@ function toast(t) { const b = $("toast"); b.textContent = t; b.hidden = false; c
 const say = (t, ok) => { const m = $("login-msg"); m.textContent = t; m.className = "msg " + (ok ? "msg-ok" : "msg-err"); m.hidden = false; };
 const kstDay = (d = new Date()) => new Date(d.getTime() + 9 * 3600e3).toISOString().slice(0, 10);
 const when = (ts) => { if (!ts) return "-"; const d = ts.toDate ? ts.toDate() : new Date(ts); return d.toLocaleString("ko-KR", { dateStyle: "short", timeStyle: "short" }); };
-function clear() { view.textContent = ""; }
+function clear() { view.textContent = ""; dirty = false; currentSave = null; dirtyNote = null; }
 function h2(t, ...tools) { const bar = el("div", { class: "adm-bar" }); bar.append(el("h2", null, t)); const tb = el("div", { class: "tools" }); tools.forEach((x) => tb.append(x)); bar.append(tb); view.append(bar); }
 function btn(t, cls, fn) { const b = el("button", { class: "btn btn-sm " + (cls || "btn-ghost"), type: "button" }, t); b.addEventListener("click", fn); return b; }
-function panel(title) { const p = el("section", { class: "panel" }); if (title) p.append(el("h3", null, title)); view.append(p); return p; }
+function panel(title, hint, host) {
+  const p = el("section", { class: "panel" });
+  if (title) { const hd = el("div", { class: "panel-head" }); hd.append(el("h3", null, title)); if (hint) hd.append(el("p", null, hint)); p.append(hd); }
+  (host || view).append(p); return p;
+}
 function field(label, value, opts = {}) {
   const id = "f" + Math.random().toString(36).slice(2, 8);
-  const w = el("div", { class: "field" }); w.append(el("label", { for: id }, label));
-  const input = opts.multi ? el("textarea", { id, rows: String(opts.rows || 3) }) : el("input", { id });
+  const w = el("div", { class: "field" + (opts.wide ? " wide" : "") });
+  const head = el("div", { class: "field-head" }); head.append(el("label", { for: id }, label)); w.append(head);
+  const input = opts.multi ? el("textarea", { id, rows: String(opts.rows || 2) }) : el("input", { id });
   if (opts.max) input.setAttribute("maxlength", String(opts.max));
   if (opts.type) input.setAttribute("type", opts.type);
+  if (opts.placeholder) input.setAttribute("placeholder", opts.placeholder);
   input.value = value == null ? "" : String(value);
+  if (opts.max && !opts.type) counter(head, input, opts.max);
   w.append(input); if (opts.help) w.append(el("small", null, opts.help));
   return { w, input };
 }
+// 글자 수 (90%를 넘으면 색이 바뀜)
+function counter(host, input, max) {
+  const c = el("span", { class: "count", "aria-hidden": "true" }); host.append(c);
+  const upd = () => { const n = input.value.length; c.textContent = n + " / " + max; c.classList.toggle("near", n >= max * 0.9); };
+  input.addEventListener("input", upd); upd();
+}
+// 입력한 만큼 늘어나는 글상자 (잘려 보이지 않게)
+function autosize(t) { if (!t.offsetParent) return; t.style.height = "auto"; t.style.height = (t.scrollHeight + 2) + "px"; }
+const sizeAll = () => view.querySelectorAll("textarea").forEach(autosize);
+new MutationObserver(() => requestAnimationFrame(sizeAll)).observe(view, { childList: true, subtree: true });
+view.addEventListener("input", (e) => { if (e.target.tagName === "TEXTAREA") autosize(e.target); markDirty(); });
+view.addEventListener("change", (e) => { if (e.target.matches("input,select")) markDirty(); });
+let rz; addEventListener("resize", () => { clearTimeout(rz); rz = setTimeout(sizeAll, 150); });
+
+// ── 저장 안 된 변경 표시 · 나가기 전 한 번 더 · ⌘S / Ctrl+S 저장
+let dirty = false, currentSave = null, dirtyNote = null;
+function markDirty() { if (!currentSave) return; dirty = true; if (dirtyNote) { dirtyNote.textContent = "저장하지 않은 변경이 있습니다"; dirtyNote.classList.add("on"); } }
+function cleanState() { dirty = false; if (dirtyNote) { dirtyNote.textContent = "변경 사항 없음"; dirtyNote.classList.remove("on"); } }
+addEventListener("beforeunload", (e) => { if (dirty) { e.preventDefault(); e.returnValue = ""; } });
+addEventListener("keydown", (e) => { if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s" && currentSave) { e.preventDefault(); currentSave(); } });
+// 화면 아래에 붙는 저장 막대
+function saveBar(onSave, ...left) {
+  const bar = el("div", { class: "savebar" });
+  dirtyNote = el("span", { class: "dirty" }, "변경 사항 없음");
+  const l = el("div", { class: "savebar-l" }); l.append(dirtyNote, ...left);
+  const save = btn("저장하기", "btn-primary", async () => { if (save.disabled) return; save.disabled = true; try { const ok = await onSave(); if (ok !== false) cleanState(); } finally { save.disabled = false; } });
+  bar.append(l, save); currentSave = () => save.click(); view.append(bar);
+  return save;
+}
+
+// ── 화면 밝기: 자동(기기 설정) · 밝게 · 어둡게
+const THEMES = [["auto", "화면: 자동"], ["light", "화면: 밝게"], ["dark", "화면: 어둡게"]];
+function applyTheme(k) { if (k === "auto") document.documentElement.removeAttribute("data-theme"); else document.documentElement.setAttribute("data-theme", k); const b = $("theme"); if (b) b.textContent = THEMES.find((x) => x[0] === k)[1]; }
+let theme = "auto"; try { theme = localStorage.getItem("gr-admin-theme") || "auto"; } catch {}
+if (!THEMES.some((x) => x[0] === theme)) theme = "auto";
+applyTheme(theme);
+$("theme").addEventListener("click", () => { const i = THEMES.findIndex((x) => x[0] === theme); theme = THEMES[(i + 1) % 3][0]; applyTheme(theme); try { localStorage.setItem("gr-admin-theme", theme); } catch {} });
 function check(label, on) { const l = el("label", { class: "toggle" }); const i = el("input", { type: "checkbox" }); i.checked = !!on; l.append(i, document.createTextNode(label)); return { w: l, input: i }; }
 // 두 번 눌러야 실행되는 위험 버튼 (브라우저 확인창 대신)
 function confirmBtn(t, fn) {
   const b = btn(t, "btn-danger", async () => {
     if (b.dataset.armed) { b.disabled = true; await fn(); return; }
     b.dataset.armed = "1"; b.textContent = "한 번 더 누르면 " + t; setTimeout(() => { delete b.dataset.armed; b.textContent = t; }, 4000);
+  });
+  return b;
+}
+// 작은 아이콘 단추 (danger면 두 번 눌러야 실행)
+function iconBtn(sym, label, fn, danger) {
+  const b = el("button", { class: "icon-btn" + (danger ? " danger" : ""), type: "button", "aria-label": label, title: label }, sym);
+  b.addEventListener("click", () => {
+    if (danger && !b.dataset.armed) { b.dataset.armed = "1"; b.textContent = "빼기?"; b.classList.add("armed"); setTimeout(() => { delete b.dataset.armed; b.textContent = sym; b.classList.remove("armed"); }, 3000); return; }
+    fn();
   });
   return b;
 }
@@ -57,17 +110,18 @@ async function snapshotsOf(target) {
   if (!s) return [];
   return s.docs.map((d) => ({ id: d.id, ...d.data() })).sort((a, b) => (b.at?.seconds || 0) - (a.at?.seconds || 0)).slice(0, 10);
 }
-function timeMachine(target, onRestore) {
-  const p = panel("타임머신 · 저장 직전 내용 되돌리기");
-  p.append(el("p", { class: "sub muted" }, "저장할 때마다 바로 전 내용을 자동으로 보관합니다. 최근 10개까지 보여 줍니다."));
+function timeMachine(target, onRestore, onView, host) {
+  const p = panel("타임머신", "저장할 때마다 바로 전 내용을 자동으로 보관합니다. 최근 10개까지 보여 줍니다.", host);
   const list = el("div", { class: "list" }); p.append(list);
   snapshotsOf(target).then((rows) => {
     if (!rows.length) { list.append(el("p", { class: "muted" }, "아직 보관된 내용이 없습니다.")); return; }
     rows.forEach((r) => {
       const row = el("div", { class: "row" });
       row.append(el("span", null, when(r.at) + " · " + (r.email || "")));
-      row.append(confirmBtn("이 시점으로 되돌리기", async () => { await onRestore(r.data); }));
-      list.append(row);
+      const tools = el("span", { class: "row-tools" });
+      if (onView) tools.append(btn("보기", null, () => onView(r)));
+      tools.append(confirmBtn("되돌리기", async () => { await onRestore(r.data); }));
+      row.append(tools); list.append(row);
     });
   });
 }
@@ -146,7 +200,10 @@ function enterApp() {
 }
 
 function bindTabs() {
-  document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.onclick = () => go(b.dataset.tab));
+  document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.onclick = () => {
+    if (dirty && b.dataset.armed !== "1") { b.dataset.armed = "1"; toast("저장하지 않은 변경이 있습니다. 한 번 더 누르면 저장하지 않고 나갑니다."); setTimeout(() => { delete b.dataset.armed; }, 4000); return; }
+    delete b.dataset.armed; go(b.dataset.tab);
+  });
 }
 function go(tab) {
   document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
@@ -249,15 +306,14 @@ async function home() {
 
   const pTl = panel("연혁 (나이테 · 내려갈수록 한 줄씩 밝아짐)"); const tlBox = el("div", { class: "repeat" }); pTl.append(tlBox);
   const addTl = (t = { when: "", what: "", now: false }) => {
-    const item = el("div", { class: "item" }); const a = el("input", { maxlength: "30", "aria-label": "때" }); a.value = t.when;
-    const b = el("input", { maxlength: "120", "aria-label": "내용" }); b.value = t.what;
-    const c = check("지금 단계", t.now); const rm = btn("빼기", "btn-danger", () => item.remove());
-    const right = el("div", { class: "tools", style: "display:flex;gap:8px;align-items:center" }); right.append(c.w, rm);
+    const item = el("div", { class: "tl-row" }); const a = el("input", { maxlength: "30", "aria-label": "때", placeholder: "때 (예: 2010.4)" }); a.value = t.when;
+    const b = el("input", { maxlength: "120", "aria-label": "내용", placeholder: "내용" }); b.value = t.what;
+    const c = check("지금 단계", t.now); c.w.classList.add("mini"); const rm = iconBtn("×", "이 줄 빼기", () => { item.remove(); markDirty(); }, true);
+    const right = el("div", { class: "row-tools" }); right.append(c.w, rm);
     item.append(a, b, right); item._get = () => ({ when: a.value.trim(), what: b.value.trim(), now: c.input.checked }); tlBox.append(item);
   };
-  (data.timeline || HOME.timeline || []).forEach(addTl); pTl.append(btn("연혁 한 줄 더하기", null, () => addTl()));
-  const save = btn("저장하기", "btn-primary", async () => {
-    save.disabled = true;
+  (data.timeline || HOME.timeline || []).forEach(addTl); pTl.append(btn("+ 연혁 한 줄 더하기", "btn-add", () => { addTl(); markDirty(); }));
+  saveBar(async () => {
     const next = { stripShow: sShow.input.checked, introShow: iShow.input.checked };
     for (const k of Object.keys(inputs)) next[k] = inputs[k].value.trim();
     next.keys = getKeys();
@@ -267,17 +323,15 @@ async function home() {
       const { updatedAt, ...old } = data; await snapshot("site/home", old);
       await setDoc(doc(db, "site", "home"), next);
       await audit("홈 화면 저장", "site/home"); toast("저장했습니다. 첫 화면에 바로 반영됩니다.");
-    } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); }
-    save.disabled = false;
-  });
-  const bar = el("div", { class: "adm-bar" }); bar.append(el("a", { href: "../", target: "_blank", rel: "noopener" }, "첫 화면 열어 보기 ↗"), save); view.append(bar);
+    } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); return false; }
+  }, el("a", { href: "../", target: "_blank", rel: "noopener" }, "첫 화면 열기 ↗"));
   timeMachine("site/home", async (old) => { await setDoc(doc(db, "site", "home"), { ...old, updatedAt: serverTimestamp(), updatedBy: me.email }); await audit("홈 화면 되돌리기", "site/home"); toast("되돌렸습니다"); go("home"); });
 }
 
 // ═══ 공고
 async function notices() {
   h2("공고", btn("새 공고 쓰기", "btn-primary", () => editNotice(null)));
-  const p = panel(); p.append(el("p", { class: "sub muted" }, "공식 공고는 지우지 않습니다. 내리려면 비공개로 바꾸고, 고칠 때마다 사유가 변경 이력에 남습니다."));
+  const p = panel(); p.append(el("p", { class: "sub muted" }, "공식 공고는 지우지 않습니다. 내리려면 비공개로 바꿉니다. 게시일 전에는 자유롭게 고치고, 게시일부터는 고칠 때마다 사유가 변경 이력에 공개됩니다."));
   const list = el("div", { class: "list" }); p.append(list);
   const s = await getDocs(collection(db, "notices")).catch(() => null);
   const rows = s ? s.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
@@ -286,64 +340,173 @@ async function notices() {
   rows.forEach((n) => {
     const row = el("div", { class: "row" });
     const a = el("button", { class: "link", type: "button" }, (n.kind === "공고" ? "제" + n.no + "호 " : "[" + n.kind + "] ") + n.title); a.onclick = () => editNotice(n);
-    const right = el("span", { class: "sub" }); right.append(el("span", { class: "pill " + (n.published ? "pill-live" : "pill-off") }, n.published ? "게시" : "비공개"), document.createTextNode(" " + (n.postedAt || "")));
+    const st = noticeState(n);
+    const right = el("span", { class: "sub" }); right.append(el("span", { class: "pill " + st.cls }, st.label), document.createTextNode(" " + (n.postedAt || "").replace(/-/g, ".")));
     row.append(a, right); list.append(row);
   });
 }
+// 공고 상태: 비공개 / 예약(게시일 전, 숨김) / 게시 전(게시일 전, 보임) / 게시 중
+function noticeState(n) {
+  const today = kstDay();
+  if (!n.published) return { label: "비공개", cls: "pill-off", pre: !!n.postedAt && today < n.postedAt };
+  if (n.postedAt && today < n.postedAt) return n.scheduled ? { label: "예약 · " + n.postedAt.slice(5).replace("-", ".") + " 공개", cls: "pill-info", pre: true } : { label: "게시일 전", cls: "pill-info", pre: true };
+  return { label: "게시 중", cls: "pill-live", pre: false };
+}
+const dot = (s) => String(s || "").replace(/-/g, ".");
+
+// 공고 미리보기 — 공개 화면(notice/view.html)과 같은 모양
+function renderPaper(box, n) {
+  box.textContent = "";
+  const paper = el("article", { class: "paper" });
+  const meta = el("div", { class: "meta" });
+  meta.append(el("span", null, n.kind === "공고" ? "공고 제" + (n.no || "○") + "호" : n.kind || ""), el("span", null, n.periodEnd ? "게시 기간 " + dot(n.postedAt) + " ~ " + dot(n.periodEnd) : "게시 " + dot(n.postedAt)));
+  paper.append(meta);
+  if (n.org) paper.append(el("p", { class: "p-org" }, n.org));
+  paper.append(el("h1", null, n.title || "(제목)"));
+  if (n.intro) paper.append(el("p", { class: "pre" }, n.intro));
+  const dl = el("dl"); (n.items || []).filter((i) => !i.hidden && (i.label || i.text)).forEach((i) => dl.append(el("dt", null, i.label), el("dd", null, i.text)));
+  paper.append(dl);
+  if (n.sign) paper.append(el("p", { class: "sign" }, n.sign));
+  paper.append(el("p", { class: "history" }, "변경 이력: " + (n.history || []).map((h) => dot(h.at) + " " + h.note).join(" · ")));
+  box.append(paper);
+}
+
 function editNotice(n) {
   clear();
-  const isNew = !n; const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: kstDay(), periodEnd: "", published: false, org: "그루터기 사회적협동조합", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
-  h2(isNew ? "새 공고" : "공고 고치기", btn("← 목록", null, () => go("notices")));
-  const p = panel("기본 정보"); const g = el("div", { class: "grid-2" }); p.append(g);
-  const idF = field("주소에 쓸 이름 (영문·숫자·-)", n ? n.id : "", { max: 60, help: "예: 2026-02. 저장 후에는 바꿀 수 없습니다." }); if (!isNew) idF.input.disabled = true;
-  const f = {
-    kind: field("종류 (공고 / 안내)", d.kind, { max: 10 }), no: field("공고 번호 (예: 2026-2)", d.no, { max: 20 }),
-    title: field("제목", d.title, { max: 200 }), status: field("상태 표시 (예: 게시 중, 마감)", d.status, { max: 20 }),
-    postedAt: field("게시일", d.postedAt, { type: "date" }), periodEnd: field("게시 마감일 (없으면 비움)", d.periodEnd, { type: "date" }),
-    org: field("공고 주체", d.org, { max: 100 })
-  };
-  g.append(idF.w); Object.values(f).forEach((x) => g.append(x.w));
-  const pub = check("홈페이지에 게시", d.published); p.append(pub.w);
-  const pB = panel("본문"); const intro = field("머리말", d.intro, { max: 2000, multi: true, rows: 4 }); pB.append(intro.w);
-  const box = el("div", { class: "repeat" }); pB.append(box);
-  const addItem = (it = { label: "", text: "" }) => {
-    const item = el("div", { class: "item" }); const a = el("input", { maxlength: "60", "aria-label": "항목 이름" }); a.value = it.label;
-    const b = el("textarea", { rows: "3", maxlength: "3000", "aria-label": "항목 내용" }); b.value = it.text;
-    item.append(a, b, btn("빼기", "btn-danger", () => item.remove())); item._get = () => ({ label: a.value.trim(), text: b.value.trim() }); box.append(item);
-  };
-  (d.items || []).forEach(addItem); pB.append(btn("항목 더하기", null, () => addItem()));
-  const sign = field("맺음 (날짜와 명의, 줄바꿈 가능)", d.sign, { max: 300, multi: true }); pB.append(sign.w);
-  const pH = panel("변경 이력"); pH.append(el("p", { class: "sub" }, (d.history || []).map((h) => h.at + " " + h.note).join(" · ") || "아직 없음"));
-  const reason = field(isNew ? "처음 게시 메모" : "이번 변경 사유 (필수)", isNew ? "최초 게시" : "", { max: 120, help: "공고 아래 ‘변경 이력’에 날짜와 함께 공개됩니다." }); pH.append(reason.w);
+  const isNew = !n, today = kstDay();
+  const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
+  // 게시일 전 = 아직 공식 게시 전 → 고쳐도 변경 이력을 남기지 않음 (내부 활동 기록·타임머신에는 그대로 남음)
+  const preNow = () => isNew || (!!d.postedAt && today < d.postedAt);
+  const firstPost = (d.history || [])[0];
 
-  const save = btn("저장하기", "btn-primary", async () => {
+  h2(isNew ? "새 공고" : "공고 편집", btn("← 목록", null, () => go("notices")));
+  const seg = el("div", { class: "seg", role: "tablist", "aria-label": "보기 방식" });
+  const segE = el("button", { type: "button", role: "tab", "aria-selected": "true" }, "편집");
+  const segP = el("button", { type: "button", role: "tab", "aria-selected": "false" }, "미리보기");
+  seg.append(segE, segP); view.append(seg);
+
+  const wrap = el("div", { class: "ne", "data-mode": "edit" }); view.append(wrap);
+  const ed = el("div", { class: "ne-edit" }), pv = el("div", { class: "ne-prev" }); wrap.append(ed, pv);
+  const pvHead = el("div", { class: "ne-prev-head" }); const pvNote = el("span", null, "공개 화면과 같은 모양 · 입력하는 대로 바뀝니다");
+  const pvBack = btn("지금 내용으로 돌아가기", null, () => { pvBack.hidden = true; pvNote.textContent = "공개 화면과 같은 모양 · 입력하는 대로 바뀝니다"; refresh(); }); pvBack.hidden = true;
+  pvHead.append(pvNote, pvBack); const pvBox = el("div", { class: "ne-paper" }); pv.append(pvHead, pvBox);
+  const setMode = (m) => { wrap.dataset.mode = m; segE.setAttribute("aria-selected", String(m === "edit")); segP.setAttribute("aria-selected", String(m === "prev")); if (m === "edit") requestAnimationFrame(sizeAll); };
+  segE.onclick = () => setMode("edit"); segP.onclick = () => { refresh(); setMode("prev"); };
+
+  // ── 게시 상태
+  const pS = panel("게시", null, ed);
+  const stLine = el("div", { class: "state-line" }); pS.append(stLine);
+  const g0 = el("div", { class: "grid-3" }); pS.append(g0);
+  const f = {
+    postedAt: field("게시일", d.postedAt, { type: "date" }),
+    periodEnd: field("게시 마감일", d.periodEnd, { type: "date", help: "없으면 비워 둡니다" }),
+    status: field("상태 표시", d.status, { max: 20, placeholder: "게시 중 / 마감" })
+  };
+  g0.append(f.postedAt.w, f.periodEnd.w, f.status.w);
+  const tg = el("div", { class: "toggles" }); pS.append(tg);
+  const pub = check("홈페이지에 게시", d.published);
+  const sch = check("게시일 전에는 숨기기 (예약 게시)", d.scheduled ?? preNow());
+  tg.append(pub.w, sch.w);
+
+  // ── 기본 정보
+  const pI = panel("기본 정보", null, ed);
+  const g = el("div", { class: "grid-2" }); pI.append(g);
+  const idF = field("주소에 쓸 이름", n ? n.id : "", { max: 60, placeholder: "예: 2026-02", help: isNew ? "영문·숫자·- 만. 저장 후에는 바꿀 수 없습니다." : "저장 후에는 바꿀 수 없습니다." }); if (!isNew) idF.input.disabled = true;
+  Object.assign(f, {
+    kind: field("종류", d.kind, { max: 10, placeholder: "공고 / 안내" }), no: field("공고 번호", d.no, { max: 20, placeholder: "예: 2026-2" }),
+    org: field("공고 주체", d.org, { max: 100 })
+  });
+  f.title = field("제목", d.title, { max: 200, wide: true });
+  g.append(f.title.w, idF.w, f.kind.w, f.no.w, f.org.w);
+
+  // ── 본문 (항목 블록: 순서 바꾸기 · 잠시 숨기기 · 빼기)
+  const pB = panel("본문", "항목은 ▲▼로 순서를 바꾸고, ‘숨기기’로 지우지 않고 잠시 감출 수 있습니다.", ed);
+  const intro = field("머리말", d.intro, { max: 2000, multi: true, rows: 3 }); pB.append(intro.w);
+  const box = el("div", { class: "clauses" }); pB.append(box);
+  const addItem = (it = { label: "", text: "" }, focus) => {
+    const item = el("div", { class: "clause" + (it.hidden ? " is-hidden" : "") });
+    const side = el("div", { class: "clause-side" });
+    side.append(iconBtn("▲", "위로", () => { if (item.previousElementSibling) { box.insertBefore(item, item.previousElementSibling); markDirty(); refresh(); } }),
+      iconBtn("▼", "아래로", () => { if (item.nextElementSibling) { box.insertBefore(item.nextElementSibling, item); markDirty(); refresh(); } }));
+    const body = el("div", { class: "clause-body" });
+    const a = el("input", { class: "clause-label", maxlength: "60", "aria-label": "항목 이름", placeholder: "항목 이름 (예: 7. 문의처)" }); a.value = it.label;
+    const b = el("textarea", { class: "clause-text", rows: "1", maxlength: "3000", "aria-label": "항목 내용", placeholder: "내용" }); b.value = it.text;
+    body.append(a, b);
+    const tools = el("div", { class: "clause-tools" });
+    const hid = check("숨기기", it.hidden); hid.w.classList.add("mini"); hid.input.addEventListener("change", () => { item.classList.toggle("is-hidden", hid.input.checked); refresh(); });
+    tools.append(hid.w, iconBtn("×", "이 항목 빼기", () => { item.remove(); markDirty(); refresh(); }, true));
+    item.append(side, body, tools);
+    item._get = () => ({ label: a.value.trim(), text: b.value.trim(), ...(hid.input.checked ? { hidden: true } : {}) });
+    box.append(item); if (focus) a.focus();
+  };
+  (d.items || []).forEach((it) => addItem(it));
+  pB.append(btn("+ 항목 더하기", "btn-add", () => { addItem({ label: (box.children.length + 1) + ". ", text: "" }, true); markDirty(); }));
+  const sign = field("맺음 (날짜와 명의, 줄바꿈 가능)", d.sign, { max: 300, multi: true, rows: 3 }); pB.append(sign.w);
+
+  // ── 변경 이력
+  const pH = panel("변경 이력", null, ed);
+  const hBox = el("div"); pH.append(hBox);
+  const reason = field("이번 변경 사유 (공개됨)", "", { max: 120, placeholder: "예: 장소 확정", help: "공고 아래 ‘변경 이력’에 날짜와 함께 공개됩니다." }); pH.append(reason.w);
+
+  const collect = () => ({
+    kind: f.kind.input.value.trim(), no: f.no.input.value.trim(), title: f.title.input.value.trim(), status: f.status.input.value.trim(),
+    postedAt: f.postedAt.input.value, periodEnd: f.periodEnd.input.value, org: f.org.input.value.trim(),
+    published: pub.input.checked, scheduled: sch.input.checked,
+    intro: intro.input.value.trim(), items: [...box.children].map((i) => i._get()).filter((i) => i.label || i.text), sign: sign.input.value.trim()
+  });
+  // 저장할 때 붙을 변경 이력
+  const nextHistory = (c) => {
+    if (preNow()) return [{ at: c.postedAt || today, note: (firstPost && firstPost.note) || "최초 게시" }];   // 게시 전: 첫 줄 하나만, 날짜는 게시일에 맞춤
+    return [...(d.history || []), { at: today, note: reason.input.value.trim().slice(0, 120) }];
+  };
+  function refresh() {
+    const c = collect(), pre = preNow();
+    const st = noticeState(c);
+    stLine.textContent = ""; stLine.append(el("span", { class: "pill " + st.cls }, st.label));
+    stLine.append(el("span", null, !c.published ? "홈페이지에 보이지 않습니다." : pre && c.scheduled ? dot(c.postedAt) + "부터 홈페이지에 보입니다. 그 전에는 공고 목록에 나타나지 않습니다." : pre ? "지금도 홈페이지에 보입니다. 게시일 전에 숨기려면 ‘예약 게시’를 켜세요." : "홈페이지에 게시 중입니다."));
+    hBox.textContent = "";
+    if (pre) {
+      hBox.append(el("p", { class: "callout" }, "아직 게시일(" + dot(c.postedAt) + ") 전이라 자유롭게 고칠 수 있고, 변경 이력이 남지 않습니다. 공개 이력은 ‘" + dot(c.postedAt) + " 최초 게시’ 한 줄입니다. 게시일이 지나면 고칠 때마다 사유를 적어야 합니다."));
+      reason.w.hidden = true;
+    } else {
+      hBox.append(el("p", { class: "sub" }, (d.history || []).map((h) => dot(h.at) + " " + h.note).join(" · ") || "아직 없음"));
+      reason.w.hidden = false;
+    }
+    if (!pvBack.hidden) return;
+    renderPaper(pvBox, { ...c, history: pre ? nextHistory(c) : [...(d.history || []), ...(reason.input.value.trim() ? [{ at: today, note: reason.input.value.trim() }] : [])] });
+  }
+  let rt; ed.addEventListener("input", () => { clearTimeout(rt); rt = setTimeout(refresh, 120); });
+  ed.addEventListener("change", () => refresh());
+  refresh();
+
+  saveBar(async () => {
     const id = (isNew ? idF.input.value : n.id).trim();
-    if (!/^[A-Za-z0-9_-]{1,60}$/.test(id)) return toast("주소에 쓸 이름은 영문·숫자·-만 쓸 수 있습니다");
-    if (!f.title.input.value.trim()) return toast("제목을 적어 주세요");
-    if (!reason.input.value.trim()) return toast("변경 사유를 적어 주세요");
-    save.disabled = true;
+    if (!/^[A-Za-z0-9_-]{1,60}$/.test(id)) { toast("주소에 쓸 이름은 영문·숫자·-만 쓸 수 있습니다"); return false; }
+    const c = collect();
+    if (!c.title) { toast("제목을 적어 주세요"); return false; }
+    if (!c.postedAt) { toast("게시일을 정해 주세요"); return false; }
+    if (!preNow() && !reason.input.value.trim()) { toast("변경 사유를 적어 주세요 (게시일이 지나 공개 이력에 남습니다)"); reason.input.focus(); return false; }
     try {
       const ref = doc(db, "notices", id);
       const cur = await getDoc(ref);
-      if (isNew && cur.exists()) { toast("같은 이름의 공고가 이미 있습니다"); save.disabled = false; return; }
-      const next = {
-        kind: f.kind.input.value.trim(), no: f.no.input.value.trim(), title: f.title.input.value.trim(), status: f.status.input.value.trim(),
-        postedAt: f.postedAt.input.value, periodEnd: f.periodEnd.input.value, org: f.org.input.value.trim(), published: pub.input.checked,
-        intro: intro.input.value.trim(), items: [...box.children].map((i) => i._get()).filter((i) => i.label || i.text), sign: sign.input.value.trim(),
-        history: [...(d.history || []), { at: kstDay(), note: reason.input.value.trim().slice(0, 120) }],
-        updatedAt: serverTimestamp(), updatedBy: me.email
-      };
+      if (isNew && cur.exists()) { toast("같은 이름의 공고가 이미 있습니다"); return false; }
+      const next = { ...c, history: nextHistory(c), updatedAt: serverTimestamp(), updatedBy: me.email };
       if (cur.exists()) { const { updatedAt, ...old } = cur.data(); await snapshot("notices/" + id, old); }
       await setDoc(ref, next);
-      await audit(isNew ? "공고 작성" : "공고 수정", "notices/" + id, reason.input.value);
-      toast("저장했습니다"); go("notices");
-    } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); save.disabled = false; }
-  });
-  const bar = el("div", { class: "adm-bar" }); if (!isNew) bar.append(el("a", { href: "../notice/view.html?id=" + encodeURIComponent(n.id), target: "_blank", rel: "noopener" }, "공고 열어 보기 ↗")); bar.append(save); view.append(bar);
+      await audit(isNew ? "공고 작성" : preNow() ? "공고 수정(게시 전)" : "공고 수정", "notices/" + id, preNow() ? "" : reason.input.value);
+      toast("저장했습니다"); cleanState(); editNotice({ id, ...next, updatedAt: null });
+    } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); return false; }
+  }, ...(isNew ? [] : [el("a", { href: "../notice/view.html?id=" + encodeURIComponent(n.id), target: "_blank", rel: "noopener" }, "공개 화면 열기 ↗")]));
+
   if (!isNew) timeMachine("notices/" + n.id, async (old) => {
-    await setDoc(doc(db, "notices", n.id), { ...old, history: [...(old.history || []), { at: kstDay(), note: "이전 내용으로 되돌림" }], updatedAt: serverTimestamp(), updatedBy: me.email });
-    await audit("공고 되돌리기", "notices/" + n.id); toast("되돌렸습니다"); go("notices");
-  });
+    const pre = !!old.postedAt && today < old.postedAt;
+    const history = pre ? [{ at: old.postedAt, note: ((old.history || [])[0] || {}).note || "최초 게시" }] : [...(old.history || []), { at: today, note: "이전 내용으로 되돌림" }];
+    await setDoc(doc(db, "notices", n.id), { ...old, history, updatedAt: serverTimestamp(), updatedBy: me.email });
+    await audit("공고 되돌리기", "notices/" + n.id); toast("되돌렸습니다"); cleanState(); go("notices");
+  }, (r) => {
+    pvBack.hidden = false; pvNote.textContent = when(r.at) + " 보관본을 보고 있습니다";
+    renderPaper(pvBox, r.data); setMode("prev"); window.scrollTo({ top: 0, behavior: "smooth" });
+  }, ed);
 }
 
 // ═══ 문의

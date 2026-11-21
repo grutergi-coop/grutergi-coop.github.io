@@ -6,6 +6,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://www.gstatic.com https://apis.google.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://*.googleapis.com https://*.firebaseio.com wss://*.firebaseio.com https://www.gstatic.com; frame-src https://grutergi-coop.firebaseapp.com https://accounts.google.com; object-src 'none'; base-uri 'self'; form-action 'self'">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <meta name="theme-color" content="#1C263A">
+<meta name="color-scheme" content="light dark">
 <meta name="apple-mobile-web-app-title" content="그루터기 관리">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
@@ -15,15 +16,16 @@
 <link rel="apple-touch-icon" href="../assets/admin-apple-touch-icon.png?v=2">
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gowun+Batang:wght@700&family=Noto+Sans+KR:wght@400;500;700&display=swap">
-<link rel="stylesheet" href="../css/style.css?v=20261121a1">
+<link rel="stylesheet" href="../css/style.css?v=20261121b1">
 </head>
-<body>
+<body class="adm-page">
 <a class="skip" href="#main">본문으로 건너뛰기</a>
 <header class="site-header">
 <div class="wrap">
 <a class="brand" href="../"><img src="../assets/logo.webp" width="44" height="44" alt=""><span><b>그루터기</b><small>관리자 화면</small></span></a>
 <div class="tools" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-<span id="who" class="muted" style="font-size:14px"></span>
+<span id="who" class="who"></span>
+<button class="btn-line btn-theme" id="theme" type="button">화면: 자동</button>
 <button class="btn-line" id="logout" type="button" hidden>로그아웃</button>
 </div>
 </div>
@@ -70,7 +72,7 @@
 </div>
 </main>
 <div class="toast" id="toast" role="status" hidden></div>
-<script type="module" src="admin.js?v=7"></script>
+<script type="module" src="admin.js?v=8"></script>
 <script type="module" src="../js/track.js"></script>
 </body>
 </html>
