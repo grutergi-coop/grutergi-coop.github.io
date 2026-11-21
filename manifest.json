@@ -1,12 +1,14 @@
 {
   "name": "그루터기 사회적협동조합",
   "short_name": "그루터기",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#F3F6F1",
   "theme_color": "#1F5C3D",
   "icons": [
-    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png" }
+    { "src": "assets/icon-192.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" }
   ]
 }

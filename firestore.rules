@@ -1,6 +1,6 @@
 rules_version = '2';
 // ═══════════════════════════════════════════════════════════════
-// 그루터기 사회적협동조합 — Firestore 보안 규칙 (v2, 2026-11-20)
+// 그루터기 사회적협동조합 — Firestore 보안 규칙 (v3, 2026-11-21)
 // 원칙: 기본은 모두 차단 · 필요한 것만 열기 · 공개 쓰기는 모양과 크기를 검사
 //
 // site/{doc}            홈 화면 내용          누구나 읽기 · 관리자만 쓰기
@@ -8,6 +8,8 @@ rules_version = '2';
 // inquiries/{id}        서면 문의             누구나 남기기(검사) · 관리자만 읽기/처리/파기
 // members/{uid}         조합원 명부           본인 신청(승인 전) · 본인 읽기 · 관리자 처리
 // admins/{uid}          관리자 목록           본인 확인만 · 콘솔에서만 추가
+// adminPins/{uid}       관리자 PIN 확인값     아무도 못 읽음 · 처음 1번 본인이 만듦 · 바꾸기는 PIN 확인 뒤
+// adminUnlock/{uid}     PIN 확인 표시         아무도 못 읽음 · PIN이 맞을 때만 기록 · 12시간 유효
 // visits/{day}          방문 수               숫자를 1씩만 올릴 수 있음 · 관리자만 읽기
 // errors/{id}           오류 알림판           모양 검사 후 기록 · 관리자만 읽기
 // loginLogs/{id}        로그인 기록           본인 것만 남기기 · 관리자만 읽기 · 수정/삭제 불가
@@ -21,9 +23,15 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
     function verified() { return signedIn() && request.auth.token.email_verified == true; }
-    function isAdmin() {
+    // 관리자 = 등록된 계정(admins) + 12시간 안에 PIN을 맞힘(adminUnlock). 둘 다 있어야 관리자 권한이 열림
+    function adminBase() {
       return verified() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
+    function unlocked() {
+      return exists(/databases/$(database)/documents/adminUnlock/$(request.auth.uid))
+        && get(/databases/$(database)/documents/adminUnlock/$(request.auth.uid)).data.at + duration.value(12, 'h') > request.time;
+    }
+    function isAdmin() { return adminBase() && unlocked(); }
     function isApproved() {
       return verified()
         && exists(/databases/$(database)/documents/members/$(request.auth.uid))
@@ -89,6 +97,30 @@ service cloud.firestore {
     match /admins/{uid} {
       allow get: if signedIn() && request.auth.uid == uid;
       allow list, write: if false;
+    }
+
+    // ── 관리자 PIN (확인값만 저장 · PIN 자체는 저장하지 않음 · 누구도 읽을 수 없음)
+    match /adminPins/{uid} {
+      function pinShape() {
+        return request.resource.data.keys().hasOnly(['h','at'])
+          && request.resource.data.h is string && request.resource.data.h.matches('^[0-9a-f]{64}$')
+          && request.resource.data.at == request.time;
+      }
+      allow read: if false;
+      allow create: if adminBase() && request.auth.uid == uid && pinShape();   // 처음 한 번 (이미 있으면 만들 수 없음)
+      allow update: if isAdmin() && request.auth.uid == uid && pinShape();     // 바꾸기는 PIN 확인 뒤에만
+      allow delete: if false;
+    }
+
+    // ── PIN 확인 표시 (맞는 PIN 확인값을 보낼 때만 기록됨 · 기록 시각부터 12시간 관리자 권한)
+    match /adminUnlock/{uid} {
+      allow read: if false;
+      allow create, update: if adminBase() && request.auth.uid == uid
+        && request.resource.data.keys().hasOnly(['p','at'])
+        && request.resource.data.at == request.time
+        && exists(/databases/$(database)/documents/adminPins/$(uid))
+        && request.resource.data.p == get(/databases/$(database)/documents/adminPins/$(uid)).data.h;
+      allow delete: if signedIn() && request.auth.uid == uid;
     }
 
     // ── 방문 수 (하루 문서 하나 · 정해진 칸만 1씩 증가)
