@@ -45,7 +45,7 @@ async function renderView() {
   if (!n && NOTICES[id]) n = NOTICES[id];
   if (!n || n.published === false) { setText(document.getElementById("n-title"), "공고를 찾을 수 없습니다."); return; }
   if (waiting(n)) { setText(document.getElementById("n-title"), "이 공고는 " + fmt(n.postedAt) + "에 게시됩니다."); return; }
-  document.title = n.title + " · 그루터기 사회적협동조합";
+  document.title = n.title + " · 그루터기 사회적협동조합(가칭)";
   setText(document.getElementById("n-no"), n.kind === "공고" ? "공고 제" + n.no + "호" : n.kind);
   setText(document.getElementById("n-period"), n.periodEnd ? "게시 기간 " + fmt(n.postedAt) + " ~ " + fmt(n.periodEnd) : "게시 " + fmt(n.postedAt));
   setText(document.getElementById("n-org"), n.org || "");
