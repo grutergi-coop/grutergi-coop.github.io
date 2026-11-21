@@ -8,10 +8,13 @@ export const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);
 
-// 링크 값 검사: 사이트 안 경로, #앵커, https 주소만 허용 (javascript: 같은 위험한 주소 차단)
+// 링크 값 검사: 사이트 안 상대 경로(view.html?id=… 등), #앵커, https 주소만 허용
+// javascript:·data: 같은 위험한 주소, //다른사이트, 공백·제어문자가 섞인 주소는 모두 "#"으로 막음
 export function safeHref(v) {
   const s = String(v || "").trim();
-  return /^(https:\/\/|\/|#|notice\/|member\/|\.\.\/)/.test(s) && !/^\/\//.test(s) ? s : "#";
+  if (!s || /[\x00-\x20\x7F\\]/.test(s) || /^\/\//.test(s)) return "#";
+  if (/^[a-z][a-z0-9+.\-]*:/i.test(s)) return /^https:\/\//i.test(s) ? s : "#";
+  return s;
 }
 
 // 글자만 넣기 (HTML로 해석하지 않음 → 스크립트 삽입 차단)
