@@ -599,3 +599,60 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
 .rise.d1{transition-delay:.12s}.rise.d2{transition-delay:.24s}.rise.d3{transition-delay:.36s}
 
 @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{animation:none!important;transition:none!important}}
+
+/* ── 휴대폰 메뉴(☰) — 768px 이상에서는 숨김 */
+.m-menu{display:none}
+@media (max-width:767px){
+  .m-menu{display:block;position:relative}
+  .home .site-header .nav{display:none}
+  .home .site-header .wrap{grid-template-columns:1fr auto auto;gap:8px;align-items:center}
+  .m-menu summary{list-style:none;display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);background:rgba(255,255,255,.8);font-size:14px;font-weight:700;color:var(--ink);cursor:pointer}
+  .m-menu summary::-webkit-details-marker{display:none}
+  .m-menu .hb,.m-menu .hb::before,.m-menu .hb::after{display:block;width:16px;height:1.5px;background:currentColor;border-radius:2px;position:relative}
+  .m-menu .hb::before,.m-menu .hb::after{content:"";position:absolute;left:0}
+  .m-menu .hb::before{top:-5px}.m-menu .hb::after{top:5px}
+  .m-menu[open] .hb{background:transparent}
+  .m-menu[open] .hb::before{top:0;transform:rotate(45deg)}.m-menu[open] .hb::after{top:0;transform:rotate(-45deg)}
+  .m-menu-panel{position:absolute;right:0;top:calc(100% + 8px);min-width:200px;display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:8px;box-shadow:0 12px 32px rgba(18,40,28,.16);z-index:30}
+  .m-menu-panel a{padding:12px 14px;border-radius:10px;color:var(--ink);text-decoration:none;font-size:16px}
+  .m-menu-panel a:active{background:var(--green-soft)}
+  .m-menu-panel .strong{color:var(--green);font-weight:700}
+  .m-menu-panel .m-login{border-top:1px solid var(--line);margin-top:4px;padding-top:14px;color:var(--green);font-weight:700}
+}
+
+/* ── 휴대폰 첫 화면 (두 장면: 처음엔 그림과 제목만 → 조금 내리면 소개·단추가 나타남) */
+@media (max-width:767px){
+  /* 공통 */
+  html[data-h] .js-scroll:not(.still) #s-hero,html[data-h].js-scroll:not(.still) #s-hero{height:230vh}
+  html[data-h] #s-hero .hero{min-height:100svh;padding-bottom:0;background-size:cover}
+  html[data-h].js-scroll:not(.still) #s-hero .hero>.wrap{opacity:calc(1 - max(0, var(--p,0) - .78) * 4.5);transform:none}
+  html[data-h] #s-hero .hero-text{max-width:none;min-width:0}
+  html[data-h] #s-hero .sheet{min-width:0}
+  html[data-h] #s-hero .notice-pill{max-width:100%}
+  html[data-h] .home .site-header>.wrap>.btn-line{display:none}
+  html[data-h] .home .site-header .wrap{grid-template-columns:1fr auto}
+  html[data-h] .home .brand small{white-space:nowrap}
+  html[data-h] #s-hero .hero h1{font-size:clamp(34px,10vw,42px);line-height:1.28}
+  html[data-h].js-scroll:not(.still) #s-hero .reveal{opacity:clamp(0, (var(--p,0) - .12) * 5, 1);transform:translateY(calc((1 - clamp(0, (var(--p,0) - .12) * 5, 1)) * 24px))}
+  html[data-h] #s-hero .eyebrow{display:none}
+  html[data-h].js-scroll:not(.still) #s-hero .hint{display:block;position:absolute;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);font-size:13px;color:var(--muted);opacity:calc(1 - var(--p,0) * 8);z-index:2;white-space:nowrap}
+  html[data-h] #s-hero .hint::after{content:"";display:block;width:1px;height:28px;margin:8px auto 0;background:currentColor;opacity:.5}
+  html[data-h] #s-hero .notice-pill{white-space:nowrap;font-size:13px}
+  html[data-h] #s-hero .notice-pill [data-k="stripText"]{overflow:hidden;text-overflow:ellipsis;min-width:0}
+
+  /* 그림이 먼저: 그림이 화면을 채우고 제목은 아래쪽, 내리면 그 아래로 소개가 이어짐 */
+  html[data-h="1"] #s-hero .hero{background-position:66% 30%;align-items:flex-end}
+  html[data-h="1"] #s-hero .hero::before{background:linear-gradient(0deg,rgba(247,250,245,.97) 0%,rgba(247,250,245,.9) 62%,rgba(247,250,245,0) 86%)}
+  html[data-h="1"] #s-hero .hero>.wrap{padding:180px 24px 48px}
+  html[data-h="1"].js-scroll:not(.still) #s-hero .hero::before{background:linear-gradient(0deg,rgba(247,250,245,.97) 0%,rgba(247,250,245,.9) calc(30% + var(--p,0) * 40%),rgba(247,250,245,0) calc(58% + var(--p,0) * 30%))}
+  html[data-h="1"].js-scroll:not(.still) #s-hero .hero>.wrap{padding:0 24px calc(72px + env(safe-area-inset-bottom))}
+  html[data-h="1"].js-scroll:not(.still) #s-hero .hero-text{gap:18px;transform:translateY(calc((1 - clamp(0, (var(--p,0) - .12) * 5, 1)) * 190px))}
+  html[data-h="1"] #s-hero [data-k="heroText"]{font-size:16px;line-height:1.8}
+
+}
+.sheet{display:contents}
+.home .hero-text .notice-pill{order:-1}
+@media (max-width:767px){html[data-h="1"] #s-hero .notice-pill{order:0}}
+@media (max-width:767px) and (max-height:720px){
+  html[data-h="1"] #s-hero [data-k="heroText"]{font-size:15px;line-height:1.7}
+}
