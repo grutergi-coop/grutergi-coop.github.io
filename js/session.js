@@ -3,7 +3,8 @@ import { auth, db } from "./fb.js";
 import { deviceType } from "./track.js";
 import {
   sendSignInLinkToEmail, isSignInWithEmailLink, signInWithEmailLink, signOut,
-  setPersistence, browserSessionPersistence, browserLocalPersistence
+  setPersistence, browserSessionPersistence, browserLocalPersistence,
+  GoogleAuthProvider, signInWithPopup
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import { doc, getDoc, setDoc, deleteDoc, addDoc, collection, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -16,6 +17,36 @@ const store = {
 // 관리자는 브라우저를 닫으면 로그아웃, 조합원은 이 기기에 로그인 유지
 export async function usePersistence(role) {
   await setPersistence(auth, role === "admin" ? browserSessionPersistence : browserLocalPersistence);
+}
+
+// 관리자: Google 계정 로그인 (같은 창 안에서 끝나는 팝업 방식 — 홈 화면 앱에서도 다른 브라우저로 넘어가지 않음)
+export async function googleSignIn(say) {
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: "select_account" });
+  try { await signInWithPopup(auth, provider); }
+  catch (e) {
+    const c = (e && e.code) || "";
+    if (c === "auth/popup-closed-by-user" || c === "auth/cancelled-popup-request") return;
+    if (c === "auth/popup-blocked") return say("로그인 창이 막혔습니다. 팝업 허용 후 다시 눌러 주세요.", false);
+    if (c === "auth/unauthorized-domain" || c === "auth/operation-not-allowed") return say("Google 로그인이 아직 켜져 있지 않습니다. 파이어베이스 설정을 확인해 주세요.", false);
+    say("로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.", false);
+  }
+}
+
+// 관리자 PIN 확인값: UID와 섞어 해시 (PIN 자체는 어디에도 저장하지 않음)
+export async function pinProof(uid, pin) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(uid + ":" + pin + ":grutergi-admin"));
+  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// 관리자 잠금: Google 로그인은 이 기기에 남기고, 관리자 권한(PIN 확인)만 닫음
+export async function lockAdmin(user, type = "timeout") {
+  clearInterval(beatTimer); clearInterval(idleTimer);
+  if (!user) return;
+  await logLogin(user, type);
+  await deleteDoc(doc(db, "sessions", user.uid)).catch(() => {});
+  await deleteDoc(doc(db, "adminUnlock", user.uid)).catch(() => {});
+  try { sessionStorage.clear(); } catch {}
 }
 
 export async function sendLink(email, say) {
@@ -71,7 +102,7 @@ export function startSession(user, role, onTimeout) {
     idleTimer = setInterval(async () => {
       if (Date.now() - lastAct > mins * 60 * 1000) {
         clearInterval(idleTimer);
-        await endSession(user, "timeout");
+        if (role === "admin") await lockAdmin(user, "timeout"); else await endSession(user, "timeout");
         if (onTimeout) onTimeout(mins);
       }
     }, 30 * 1000);
