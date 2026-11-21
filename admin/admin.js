@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════════════
-// 관리자 화면 — 그루터기 사회적협동조합
+// 관리자 화면 — 그루터기 사회적협동조합(가칭)
 // 대시보드 · 홈 화면 · 공고 · 문의 · 조합원 · 보안·기록(접속 현황/로그인 기록/활동 기록/오류 알림판/보안 설정)
 // 권한은 화면이 아니라 데이터베이스 보안 규칙(admins 목록)이 지킵니다.
 // 모든 내용은 글자로만 넣습니다(HTML 해석 없음). 저장 직전 내용은 타임머신(snapshots)에 보관합니다.
@@ -374,7 +374,7 @@ function renderPaper(box, n) {
 function editNotice(n) {
   clear();
   const isNew = !n, today = kstDay();
-  const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
+  const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합(가칭)", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
   // 게시일 전 = 아직 공식 게시 전 → 고쳐도 변경 이력을 남기지 않음 (내부 활동 기록·타임머신에는 그대로 남음)
   const preNow = () => isNew || (!!d.postedAt && today < d.postedAt);
   const firstPost = (d.history || [])[0];
