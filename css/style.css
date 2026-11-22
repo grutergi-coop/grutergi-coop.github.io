@@ -412,13 +412,42 @@ html[data-theme="dark"] .adm-page input:not([type=checkbox]):hover,html[data-the
 @keyframes drip{0%{transform:scaleY(0);transform-origin:top}50%{transform:scaleY(1);transform-origin:top}51%{transform-origin:bottom}100%{transform:scaleY(0);transform-origin:bottom}}
 @media (max-width:767px){.js-scroll:not(.still) .hint{display:none}}
 
-/* 세로로 긴 태블릿(아이패드 세로): 휴대폰처럼 그림을 아래에 두고 글은 위에 */
-@media (min-width:768px) and (orientation:portrait){
-  .home .hero{background-position:72% bottom;background-size:auto 58%;align-items:flex-start}
-  .home .hero::before{background:linear-gradient(180deg,rgba(247,250,245,.98) 40%,rgba(247,250,245,0) 66%)}
-  .night .home .hero{background-color:#ECF2F1}
-  .night .home .hero::before{background:linear-gradient(180deg,rgba(236,242,241,.98) 40%,rgba(236,242,241,0) 66%)}
-  .home .hero-text{max-width:620px}
+/* ── 세로로 길거나 정사각에 가까운 큰 화면(아이패드·안드로이드 태블릿 세로, 펼친 폴더블 등)
+   그림을 화면 전체에 깔고(띠 모양으로 잘리지 않게) 위쪽은 글, 아래쪽은 그루터기가 보이도록
+   글 뒤의 막은 끝이 보이지 않게 천천히 사라짐 */
+@media (min-width:768px) and (max-aspect-ratio:9/8){
+  .home .hero{background-size:cover;background-position:72% 100%;align-items:flex-start}
+  .home .hero::before{background:linear-gradient(180deg,rgba(247,250,245,0.97) 0%,rgba(247,250,245,0.97) 34%,rgba(247,250,245,0.935) 38.2%,rgba(247,250,245,0.835) 42.4%,rgba(247,250,245,0.687) 46.7%,rgba(247,250,245,0.512) 50.9%,rgba(247,250,245,0.336) 55.1%,rgba(247,250,245,0.184) 59.3%,rgba(247,250,245,0.074) 63.6%,rgba(247,250,245,0.015) 67.8%,rgba(247,250,245,0) 72%)}
+  .night .home .hero{background-color:#1d2f33}
+  .night .home .hero::before{background:linear-gradient(180deg,rgba(236,242,241,0.97) 0%,rgba(236,242,241,0.97) 34%,rgba(236,242,241,0.935) 38.2%,rgba(236,242,241,0.835) 42.4%,rgba(236,242,241,0.687) 46.7%,rgba(236,242,241,0.512) 50.9%,rgba(236,242,241,0.336) 55.1%,rgba(236,242,241,0.184) 59.3%,rgba(236,242,241,0.074) 63.6%,rgba(236,242,241,0.015) 67.8%,rgba(236,242,241,0) 72%)}
+  .home .hero-text{max-width:640px}
+  .home .hero .wrap{padding-top:clamp(120px,11vh,170px)}
+  .home .hero h1{font-size:clamp(44px,6.4vw,72px)}
+  .home .hero p{font-size:clamp(17px,2.1vw,21px)}
+  .js-scroll:not(.still) #s-hero .hero{transform-origin:72% 100%}
+}
+/* 가로로 놓았지만 높이가 낮은 화면(휴대폰 가로, 작은 노트북 창): 글이 화면 안에 들어오게 줄임 */
+@media (min-width:768px) and (max-height:600px) and (orientation:landscape){
+  .home .hero .wrap{padding-top:84px;padding-bottom:28px}
+  .home .hero h1{font-size:clamp(28px,7.2vh,44px)}
+  .home .hero p{font-size:15px;line-height:1.65}
+  .home .hero-text{gap:12px}
+  .js-scroll:not(.still) .hint{display:none}
+}
+/* 아주 넓은 화면(27인치·울트라와이드): 글이 너무 작아 보이지 않게 */
+@media (min-width:1800px){
+  .home .hero h1{font-size:clamp(60px,3.4vw,84px)}
+  .home .hero p{font-size:clamp(19px,1.05vw,23px)}
+  .home .hero-text{max-width:720px}
+  .home .hero .wrap,.home .site-header .wrap{max-width:min(1640px,88vw)}
+}
+/* 휴대폰을 가로로 눕혔을 때: 제목·공고 띠를 낮은 화면에 맞게 줄임 */
+@media (max-width:767px) and (orientation:landscape){
+  html[data-h] #s-hero .hero h1{font-size:clamp(24px,9vh,34px);line-height:1.25}
+  html[data-h] #s-hero .notice-pill{font-size:12px}
+  html[data-h] #s-hero [data-k="heroText"]{font-size:14px;line-height:1.6}
+  html[data-h] #s-hero .hero-text{gap:10px;max-width:560px}
+  .home .site-header .brand small{display:none}
 }
 
 /* 2. 중심 말씀: 짙은 숲색, 한 단어씩 밝아짐 */
