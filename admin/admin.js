@@ -7,7 +7,8 @@
 import { auth, db, el } from "../js/fb.js";
 import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSession, logLogin } from "../js/session.js";
 import { HOME, NOTICES } from "../js/defaults.js";
-import { renderA4 } from "../js/paper.js";
+import { renderA4, LAYOUTS } from "../js/paper.js";
+import { TEMPLATES } from "./templates.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, where, orderBy, limit,
@@ -358,7 +359,8 @@ const dot = (s) => String(s || "").replace(/-/g, ".");
 function editNotice(n) {
   clear();
   const isNew = !n, today = kstDay();
-  const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합(가칭)", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
+  const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합(가칭)", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [], layout: "number" };
+  let layout = LAYOUTS.some((l) => l[0] === d.layout) ? d.layout : "number";
   // 공고는 게시 전후 언제든 고칠 수 있고, 공개 화면에 변경 이력을 남기지 않음
   // (고치기 전 내용은 타임머신에, 누가 언제 고쳤는지는 관리자 활동 기록에 그대로 남음)
   const preNow = () => isNew || (!!d.postedAt && today < d.postedAt);
@@ -381,6 +383,24 @@ function editNotice(n) {
   const setMode = (m) => { wrap.dataset.mode = m; segE.setAttribute("aria-selected", String(m === "edit")); segP.setAttribute("aria-selected", String(m === "prev")); if (m === "edit") requestAnimationFrame(sizeAll); };
   segE.onclick = () => setMode("edit"); segP.onclick = () => { setMode("prev"); refresh(); };
 
+  // ── 규격틀 고르기 (새 공고만): 고르면 항목 이름·예시 문구·모양이 미리 채워짐
+  let applyTpl = null;
+  if (isNew) {
+    const pT = panel("규격틀 고르기", "틀을 고르면 항목과 예시 문구가 채워집니다. [ ] 안만 바꿔 적으면 됩니다.", ed);
+    const picks = el("div", { class: "tpl-picks" }); pT.append(picks);
+    TEMPLATES.forEach((tp) => {
+      const b = el("button", { class: "tpl-pick", type: "button", "aria-pressed": "false" });
+      b.append(el("b", null, tp.name), el("small", null, tp.desc));
+      b.addEventListener("click", () => {
+        if (dirty && b.dataset.armed !== "1") { b.dataset.armed = "1"; toast("한 번 더 누르면 지금 적은 내용 대신 이 틀로 바뀝니다"); setTimeout(() => delete b.dataset.armed, 4000); return; }
+        delete b.dataset.armed;
+        picks.querySelectorAll(".tpl-pick").forEach((x) => x.setAttribute("aria-pressed", String(x === b)));
+        applyTpl(tp);
+      });
+      picks.append(b);
+    });
+  }
+
   // ── 게시 상태
   const pS = panel("게시", null, ed);
   const stLine = el("div", { class: "state-line" }); pS.append(stLine);
@@ -396,6 +416,19 @@ function editNotice(n) {
   const sch = check("게시일 전에는 숨기기 (예약 게시)", d.scheduled ?? preNow());
   tg.append(pub.w, sch.w);
 
+  // ── 문서 모양 (A4 출력 디자인)
+  const pL = panel("문서 모양", "고르면 오른쪽 미리보기가 바로 바뀝니다. 글 내용은 그대로입니다.", ed);
+  const lPicks = el("div", { class: "lay-picks", role: "radiogroup", "aria-label": "문서 모양" }); pL.append(lPicks);
+  const paintLayout = () => lPicks.querySelectorAll(".lay-pick").forEach((x) => x.setAttribute("aria-pressed", String(x.dataset.k === layout)));
+  LAYOUTS.forEach(([k, name, desc]) => {
+    const b = el("button", { class: "lay-pick", type: "button", "data-k": k, "aria-pressed": "false" });
+    const mini = el("span", { class: "lay-mini m-" + k, "aria-hidden": "true" }); for (let i = 0; i < 5; i++) mini.append(el("i"));
+    b.append(mini, el("b", null, name), el("small", null, desc));
+    b.addEventListener("click", () => { layout = k; paintLayout(); markDirty(); refresh(); });
+    lPicks.append(b);
+  });
+  paintLayout();
+
   // ── 기본 정보
   const pI = panel("기본 정보", null, ed);
   const g = el("div", { class: "grid-2" }); pI.append(g);
@@ -409,6 +442,10 @@ function editNotice(n) {
 
   // ── 본문 (항목 블록: 순서 바꾸기 · 잠시 숨기기 · 빼기)
   const pB = panel("본문", "항목은 ▲▼로 순서를 바꾸고, ‘숨기기’로 지우지 않고 잠시 감출 수 있습니다.", ed);
+  const help = el("div", { class: "fmt-help" });
+  help.append(el("span", null, "줄 앞머리에 이렇게 쓰면 문서에서 자동으로 정돈됩니다:"));
+  [["가. 나. 다.", "들여쓴 목록"], ["1) ①", "하위 목록"], ["제1호", "안건 목록"], ["- ·", "점 목록"], ["※", "참고 글"], ["일시: 내용", "이름표"]].forEach(([c, d2]) => { help.append(el("code", null, c), el("span", null, d2)); });
+  pB.append(help);
   const intro = field("머리말", d.intro, { max: 2000, multi: true, rows: 3 }); pB.append(intro.w);
   const box = el("div", { class: "clauses" }); pB.append(box);
   const addItem = (it = { label: "", text: "" }, focus) => {
@@ -431,6 +468,15 @@ function editNotice(n) {
   pB.append(btn("+ 항목 더하기", "btn-add", () => { addItem({ label: (box.children.length + 1) + ". ", text: "" }, true); markDirty(); }));
   const sign = field("맺음 (날짜와 명의, 줄바꿈 가능)", d.sign, { max: 300, multi: true, rows: 3 }); pB.append(sign.w);
 
+  // 규격틀 적용: 칸을 틀 내용으로 채움
+  applyTpl = (tp) => {
+    f.kind.input.value = tp.kind; f.title.input.value = tp.title; intro.input.value = tp.intro; sign.input.value = tp.sign;
+    box.textContent = ""; tp.items.forEach(([label, text]) => addItem({ label, text }));
+    layout = tp.layout; paintLayout();
+    [f.kind, f.title].forEach((x) => x.input.dispatchEvent(new Event("input", { bubbles: true })));
+    requestAnimationFrame(sizeAll); markDirty(); refresh();
+  };
+
   // ── 수정 안내 (변경 이력은 남기지 않음)
   const pH = panel("수정 안내", null, ed);
   pH.append(el("p", { class: "callout" }, "게시한 뒤에도 언제든 고칠 수 있고, 공개 화면에 변경 이력은 표시하지 않습니다. 고치기 전 내용은 아래 타임머신에 자동으로 보관되어 언제든 되돌릴 수 있습니다."));
@@ -439,7 +485,7 @@ function editNotice(n) {
   const collect = () => ({
     kind: f.kind.input.value.trim(), no: f.no.input.value.trim(), title: f.title.input.value.trim(), status: f.status.input.value.trim(),
     postedAt: f.postedAt.input.value, periodEnd: f.periodEnd.input.value, org: f.org.input.value.trim(),
-    published: pub.input.checked, scheduled: sch.input.checked,
+    published: pub.input.checked, scheduled: sch.input.checked, layout,
     intro: intro.input.value.trim(), items: [...box.children].map((i) => i._get()).filter((i) => i.label || i.text), sign: sign.input.value.trim()
   });
   // 보안 규칙상 history 칸이 필요해 '최초 게시' 한 줄만 둠 (날짜는 게시일에 맞춤, 화면에는 표시하지 않음)
