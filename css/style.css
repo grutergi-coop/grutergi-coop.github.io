@@ -867,28 +867,25 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
   .say footer span{font-size:.92em;padding-left:2.4em}
 }
 
-/* ── 첫 화면 머리글 가독성: 그림 위에서도 로고 글씨·메뉴가 또렷하게 */
-.home .site-header::before{content:"";position:absolute;left:0;right:0;top:0;bottom:-28px;z-index:-1;pointer-events:none;transition:opacity .4s;
-  background:linear-gradient(180deg,rgba(246,249,244,.86) 0%,rgba(246,249,244,.6) 55%,rgba(246,249,244,0) 100%)}
+/* ── 첫 화면 머리글 가독성: 그림 위에 끝이 보이지 않게 부드럽게 사라지는 막 (글자 그림자 없음) */
+.home .site-header::before{content:"";position:absolute;left:0;right:0;top:0;bottom:-72px;z-index:-1;pointer-events:none;transition:opacity .4s;
+  background:linear-gradient(180deg,rgba(246,249,244,0.860) 0%,rgba(246,249,244,0.832) 10%,rgba(246,249,244,0.751) 20%,rgba(246,249,244,0.630) 30%,rgba(246,249,244,0.485) 40%,rgba(246,249,244,0.337) 50%,rgba(246,249,244,0.205) 60%,rgba(246,249,244,0.102) 70%,rgba(246,249,244,0.036) 80%,rgba(246,249,244,0.006) 90%,rgba(246,249,244,0.000) 100%)}
 .home .site-header.solid::before,.home .site-header.dark::before{opacity:0}
-.home .site-header .brand b,.home .site-header .nav a{text-shadow:0 1px 1px rgba(255,255,255,.55)}
 .home .site-header .brand small{color:#3F4D45}
 .home .site-header .btn-line{background:rgba(255,255,255,.72)}
-.home .site-header.dark .brand b,.home .site-header.dark .nav a{text-shadow:none}
 .home .site-header.dark .btn-line{background:transparent}
 /* 밤 화면: 위쪽이 어두우므로 어두운 막 + 흰 글씨 */
 @media (min-width:768px){
-  .night .home .site-header:not(.solid):not(.dark)::before{background:linear-gradient(180deg,rgba(12,28,30,.78) 0%,rgba(12,28,30,.5) 55%,rgba(12,28,30,0) 100%)}
-  .night .home .site-header:not(.solid):not(.dark) .brand,.night .home .site-header:not(.solid):not(.dark) .nav a{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  .night .home .site-header:not(.solid):not(.dark)::before{background:linear-gradient(180deg,rgba(12,28,30,0.800) 0%,rgba(12,28,30,0.774) 10%,rgba(12,28,30,0.699) 20%,rgba(12,28,30,0.586) 30%,rgba(12,28,30,0.451) 40%,rgba(12,28,30,0.314) 50%,rgba(12,28,30,0.191) 60%,rgba(12,28,30,0.095) 70%,rgba(12,28,30,0.034) 80%,rgba(12,28,30,0.005) 90%,rgba(12,28,30,0.000) 100%)}
+  .night .home .site-header:not(.solid):not(.dark) .brand,.night .home .site-header:not(.solid):not(.dark) .nav a{color:#fff}
   .night .home .site-header:not(.solid):not(.dark) .brand small{color:rgba(255,255,255,.82)}
   .night .home .site-header:not(.solid):not(.dark) .nav a.strong{color:var(--gold)}
   .night .home .site-header:not(.solid):not(.dark) .btn-line{color:#fff;border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.08)}
 }
 @media (max-width:767px){
-  .home .site-header::before{bottom:-36px}
+  .home .site-header::before{bottom:-60px}
   .home .site-header.solid::before{opacity:1}
-  .night .home .site-header::before{opacity:1;background:linear-gradient(180deg,rgba(12,28,30,.8) 0%,rgba(12,28,30,.5) 55%,rgba(12,28,30,0) 100%)}
+  .night .home .site-header::before{opacity:1;background:linear-gradient(180deg,rgba(12,28,30,0.800) 0%,rgba(12,28,30,0.774) 10%,rgba(12,28,30,0.699) 20%,rgba(12,28,30,0.586) 30%,rgba(12,28,30,0.451) 40%,rgba(12,28,30,0.314) 50%,rgba(12,28,30,0.191) 60%,rgba(12,28,30,0.095) 70%,rgba(12,28,30,0.034) 80%,rgba(12,28,30,0.005) 90%,rgba(12,28,30,0.000) 100%)}
   .night .home .site-header .brand{color:#fff}
-  .night .home .site-header .brand b{text-shadow:0 1px 3px rgba(0,0,0,.45)}
   .night .home .site-header .brand small{color:rgba(255,255,255,.85)}
 }
