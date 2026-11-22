@@ -7,6 +7,7 @@
 import { auth, db, el } from "../js/fb.js";
 import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSession, logLogin } from "../js/session.js";
 import { HOME, NOTICES } from "../js/defaults.js";
+import { renderA4 } from "../js/paper.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, where, orderBy, limit,
@@ -331,7 +332,7 @@ async function home() {
 // ═══ 공고
 async function notices() {
   h2("공고", btn("새 공고 쓰기", "btn-primary", () => editNotice(null)));
-  const p = panel(); p.append(el("p", { class: "sub muted" }, "공식 공고는 지우지 않습니다. 내리려면 비공개로 바꿉니다. 게시일 전에는 자유롭게 고치고, 게시일부터는 고칠 때마다 사유가 변경 이력에 공개됩니다."));
+  const p = panel(); p.append(el("p", { class: "sub muted" }, "공식 공고는 지우지 않습니다. 내리려면 비공개로 바꿉니다. 게시 전후 언제든 고칠 수 있고, 고치기 전 내용은 타임머신에 보관됩니다."));
   const list = el("div", { class: "list" }); p.append(list);
   const s = await getDocs(collection(db, "notices")).catch(() => null);
   const rows = s ? s.docs.map((d) => ({ id: d.id, ...d.data() })) : [];
@@ -354,30 +355,13 @@ function noticeState(n) {
 }
 const dot = (s) => String(s || "").replace(/-/g, ".");
 
-// 공고 미리보기 — 공개 화면(notice/view.html)과 같은 모양
-function renderPaper(box, n) {
-  box.textContent = "";
-  const paper = el("article", { class: "paper" });
-  const meta = el("div", { class: "meta" });
-  meta.append(el("span", null, n.kind === "공고" ? "공고 제" + (n.no || "○") + "호" : n.kind || ""), el("span", null, n.periodEnd ? "게시 기간 " + dot(n.postedAt) + " ~ " + dot(n.periodEnd) : "게시 " + dot(n.postedAt)));
-  paper.append(meta);
-  if (n.org) paper.append(el("p", { class: "p-org" }, n.org));
-  paper.append(el("h1", null, n.title || "(제목)"));
-  if (n.intro) paper.append(el("p", { class: "pre" }, n.intro));
-  const dl = el("dl"); (n.items || []).filter((i) => !i.hidden && (i.label || i.text)).forEach((i) => dl.append(el("dt", null, i.label), el("dd", null, i.text)));
-  paper.append(dl);
-  if (n.sign) paper.append(el("p", { class: "sign" }, n.sign));
-  paper.append(el("p", { class: "history" }, "변경 이력: " + (n.history || []).map((h) => dot(h.at) + " " + h.note).join(" · ")));
-  box.append(paper);
-}
-
 function editNotice(n) {
   clear();
   const isNew = !n, today = kstDay();
   const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합(가칭)", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [] };
-  // 게시일 전 = 아직 공식 게시 전 → 고쳐도 변경 이력을 남기지 않음 (내부 활동 기록·타임머신에는 그대로 남음)
+  // 공고는 게시 전후 언제든 고칠 수 있고, 공개 화면에 변경 이력을 남기지 않음
+  // (고치기 전 내용은 타임머신에, 누가 언제 고쳤는지는 관리자 활동 기록에 그대로 남음)
   const preNow = () => isNew || (!!d.postedAt && today < d.postedAt);
-  const firstPost = (d.history || [])[0];
 
   h2(isNew ? "새 공고" : "공고 편집", btn("← 목록", null, () => go("notices")));
   const seg = el("div", { class: "seg", role: "tablist", "aria-label": "보기 방식" });
@@ -387,11 +371,15 @@ function editNotice(n) {
 
   const wrap = el("div", { class: "ne", "data-mode": "edit" }); view.append(wrap);
   const ed = el("div", { class: "ne-edit" }), pv = el("div", { class: "ne-prev" }); wrap.append(ed, pv);
-  const pvHead = el("div", { class: "ne-prev-head" }); const pvNote = el("span", null, "공개 화면과 같은 모양 · 입력하는 대로 바뀝니다");
-  const pvBack = btn("지금 내용으로 돌아가기", null, () => { pvBack.hidden = true; pvNote.textContent = "공개 화면과 같은 모양 · 입력하는 대로 바뀝니다"; refresh(); }); pvBack.hidden = true;
-  pvHead.append(pvNote, pvBack); const pvBox = el("div", { class: "ne-paper" }); pv.append(pvHead, pvBox);
+  const NOTE = "A4 실제 규격 · 입력하는 대로 바뀝니다";
+  const pvHead = el("div", { class: "ne-prev-head" }); const pvNote = el("span", null, NOTE);
+  const pvTools = el("span", { class: "row-tools" });
+  const pvBack = btn("지금 내용으로 돌아가기", null, () => { pvBack.hidden = true; refresh(); }); pvBack.hidden = true;
+  pvTools.append(pvBack, btn("인쇄 · PDF로 보기", null, () => { refresh(); window.print(); }));
+  pvHead.append(pvNote, pvTools); const pvBox = el("div", { class: "ne-paper" }); pv.append(pvHead, pvBox);
+  const showPaper = (data, note) => { const pages = renderA4(pvBox, data, { forceA4: true }); pvNote.textContent = (note || NOTE) + " · " + pages + "쪽"; };
   const setMode = (m) => { wrap.dataset.mode = m; segE.setAttribute("aria-selected", String(m === "edit")); segP.setAttribute("aria-selected", String(m === "prev")); if (m === "edit") requestAnimationFrame(sizeAll); };
-  segE.onclick = () => setMode("edit"); segP.onclick = () => { refresh(); setMode("prev"); };
+  segE.onclick = () => setMode("edit"); segP.onclick = () => { setMode("prev"); refresh(); };
 
   // ── 게시 상태
   const pS = panel("게시", null, ed);
@@ -443,10 +431,10 @@ function editNotice(n) {
   pB.append(btn("+ 항목 더하기", "btn-add", () => { addItem({ label: (box.children.length + 1) + ". ", text: "" }, true); markDirty(); }));
   const sign = field("맺음 (날짜와 명의, 줄바꿈 가능)", d.sign, { max: 300, multi: true, rows: 3 }); pB.append(sign.w);
 
-  // ── 변경 이력
-  const pH = panel("변경 이력", null, ed);
-  const hBox = el("div"); pH.append(hBox);
-  const reason = field("이번 변경 사유 (공개됨)", "", { max: 120, placeholder: "예: 장소 확정", help: "공고 아래 ‘변경 이력’에 날짜와 함께 공개됩니다." }); pH.append(reason.w);
+  // ── 수정 안내 (변경 이력은 남기지 않음)
+  const pH = panel("수정 안내", null, ed);
+  pH.append(el("p", { class: "callout" }, "게시한 뒤에도 언제든 고칠 수 있고, 공개 화면에 변경 이력은 표시하지 않습니다. 고치기 전 내용은 아래 타임머신에 자동으로 보관되어 언제든 되돌릴 수 있습니다."));
+  const warn = el("p", { class: "sub" }, "참고: 일시·장소, 조합원 자격요건, 의결 사항을 게시 후에 바꾸면, 바뀐 내용이 총회 7일 전까지 게시되어 있어야 합니다(시행령 제17조)."); pH.append(warn);
 
   const collect = () => ({
     kind: f.kind.input.value.trim(), no: f.no.input.value.trim(), title: f.title.input.value.trim(), status: f.status.input.value.trim(),
@@ -454,26 +442,16 @@ function editNotice(n) {
     published: pub.input.checked, scheduled: sch.input.checked,
     intro: intro.input.value.trim(), items: [...box.children].map((i) => i._get()).filter((i) => i.label || i.text), sign: sign.input.value.trim()
   });
-  // 저장할 때 붙을 변경 이력
-  const nextHistory = (c) => {
-    if (preNow()) return [{ at: c.postedAt || today, note: (firstPost && firstPost.note) || "최초 게시" }];   // 게시 전: 첫 줄 하나만, 날짜는 게시일에 맞춤
-    return [...(d.history || []), { at: today, note: reason.input.value.trim().slice(0, 120) }];
-  };
+  // 보안 규칙상 history 칸이 필요해 '최초 게시' 한 줄만 둠 (날짜는 게시일에 맞춤, 화면에는 표시하지 않음)
+  const nextHistory = (c) => [{ at: c.postedAt || today, note: "최초 게시" }];
   function refresh() {
     const c = collect(), pre = preNow();
     const st = noticeState(c);
     stLine.textContent = ""; stLine.append(el("span", { class: "pill " + st.cls }, st.label));
     stLine.append(el("span", null, !c.published ? "홈페이지에 보이지 않습니다." : pre && c.scheduled ? dot(c.postedAt) + "부터 홈페이지에 보입니다. 그 전에는 공고 목록에 나타나지 않습니다." : pre ? "지금도 홈페이지에 보입니다. 게시일 전에 숨기려면 ‘예약 게시’를 켜세요." : "홈페이지에 게시 중입니다."));
-    hBox.textContent = "";
-    if (pre) {
-      hBox.append(el("p", { class: "callout" }, "아직 게시일(" + dot(c.postedAt) + ") 전이라 자유롭게 고칠 수 있고, 변경 이력이 남지 않습니다. 공개 이력은 ‘" + dot(c.postedAt) + " 최초 게시’ 한 줄입니다. 게시일이 지나면 고칠 때마다 사유를 적어야 합니다."));
-      reason.w.hidden = true;
-    } else {
-      hBox.append(el("p", { class: "sub" }, (d.history || []).map((h) => dot(h.at) + " " + h.note).join(" · ") || "아직 없음"));
-      reason.w.hidden = false;
-    }
-    if (!pvBack.hidden) return;
-    renderPaper(pvBox, { ...c, history: pre ? nextHistory(c) : [...(d.history || []), ...(reason.input.value.trim() ? [{ at: today, note: reason.input.value.trim() }] : [])] });
+    warn.hidden = pre;
+    if (!pvBack.hidden || !pv.offsetParent) return;   // 미리보기가 보일 때만 다시 그림 (안 보이면 쪽 나눔을 잴 수 없음)
+    showPaper(c);
   }
   let rt; ed.addEventListener("input", () => { clearTimeout(rt); rt = setTimeout(refresh, 120); });
   ed.addEventListener("change", () => refresh());
@@ -485,7 +463,6 @@ function editNotice(n) {
     const c = collect();
     if (!c.title) { toast("제목을 적어 주세요"); return false; }
     if (!c.postedAt) { toast("게시일을 정해 주세요"); return false; }
-    if (!preNow() && !reason.input.value.trim()) { toast("변경 사유를 적어 주세요 (게시일이 지나 공개 이력에 남습니다)"); reason.input.focus(); return false; }
     try {
       const ref = doc(db, "notices", id);
       const cur = await getDoc(ref);
@@ -493,19 +470,18 @@ function editNotice(n) {
       const next = { ...c, history: nextHistory(c), updatedAt: serverTimestamp(), updatedBy: me.email };
       if (cur.exists()) { const { updatedAt, ...old } = cur.data(); await snapshot("notices/" + id, old); }
       await setDoc(ref, next);
-      await audit(isNew ? "공고 작성" : preNow() ? "공고 수정(게시 전)" : "공고 수정", "notices/" + id, preNow() ? "" : reason.input.value);
+      await audit(isNew ? "공고 작성" : "공고 수정", "notices/" + id);
       toast("저장했습니다"); cleanState(); editNotice({ id, ...next, updatedAt: null });
     } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); return false; }
   }, ...(isNew ? [] : [el("a", { href: "../notice/view.html?id=" + encodeURIComponent(n.id), target: "_blank", rel: "noopener" }, "공개 화면 열기 ↗")]));
 
   if (!isNew) timeMachine("notices/" + n.id, async (old) => {
-    const pre = !!old.postedAt && today < old.postedAt;
-    const history = pre ? [{ at: old.postedAt, note: ((old.history || [])[0] || {}).note || "최초 게시" }] : [...(old.history || []), { at: today, note: "이전 내용으로 되돌림" }];
+    const history = [{ at: old.postedAt || today, note: "최초 게시" }];
     await setDoc(doc(db, "notices", n.id), { ...old, history, updatedAt: serverTimestamp(), updatedBy: me.email });
     await audit("공고 되돌리기", "notices/" + n.id); toast("되돌렸습니다"); cleanState(); go("notices");
   }, (r) => {
-    pvBack.hidden = false; pvNote.textContent = when(r.at) + " 보관본을 보고 있습니다";
-    renderPaper(pvBox, r.data); setMode("prev"); window.scrollTo({ top: 0, behavior: "smooth" });
+    pvBack.hidden = false; setMode("prev");
+    showPaper(r.data, when(r.at) + " 보관본"); window.scrollTo({ top: 0, behavior: "smooth" });
   }, ed);
 }
 
