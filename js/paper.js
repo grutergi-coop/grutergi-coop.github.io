@@ -11,8 +11,12 @@ export const LAYOUTS = [
   ["grid", "격자표형", "칸마다 테두리, 항목 칸 음영"],
   ["official", "관공서형", "기관명 머리 · 겹줄 · 오른쪽 명의"],
   ["guide", "안내형", "초록 막대 소제목"],
-  ["card", "카드형", "항목마다 둥근 상자"]
+  ["card", "카드형", "항목마다 둥근 상자"],
+  ["poster", "게시판형", "큰 제목 띠 · 굵은 안내 · 벽에 붙이기"]
 ];
+// 문서 종류: 공고(모양 7가지) · 공문(행정기관 표준 기안문 형식) · 가정통신문(회신서 절취선 포함)
+export const FORMS = [["notice", "공고·안내"], ["letter", "공문"], ["home", "가정통신문"]];
+const formOf = (n) => (FORMS.some((f) => f[0] === n.form) ? n.form : "notice");
 const layoutOf = (n) => (LAYOUTS.some((l) => l[0] === n.layout) ? n.layout : "number");
 const dot = (s) => String(s || "").replace(/-/g, ".");
 
@@ -24,15 +28,21 @@ function mk(tag, cls, text) {
 }
 
 // ── 글 정돈: 입력은 그냥 줄글로, 줄 앞머리를 보고 자동으로 모양을 잡음
-//   가. 나. 다.   → 들여쓴 목록        1) 2) / ① ②  → 한 단계 더 들여쓴 목록
+//   공문 항목 기호 순서(행정업무 규정): 1. → 가. → 1) → 가) → (1) → (가) → ① → ㉮  (단계마다 2타씩 들여씀)
 //   제1호 …       → 안건 번호 목록     - · •       → 점 목록
 //   ※ …           → 작은 참고 글       일시: …      → 이름표 + 내용
 //   빈 줄         → 문단 사이 띄움     그 밖        → 보통 문단
+const HG = "가나다라마바사아자차카타파하";
 const RULES = [
   [/^(제\s?\d+\s?호)\s*(.*)$/, "agenda"],
-  [/^([가나다라마바사아자차카타파하])\.\s*(.*)$/, "l1"],
+  [/^(\d{1,2}\.)\s+(.*)$/, "n0"],
+  [new RegExp("^([" + HG + "]\\.)\\s*(.*)$"), "l1"],
   [/^(\d{1,2}\))\s*(.*)$/, "l2"],
-  [/^([①-⑳])\s*(.*)$/, "l2"],
+  [new RegExp("^([" + HG + "]\\))\\s*(.*)$"), "l3"],
+  [/^(\(\d{1,2}\))\s*(.*)$/, "l4"],
+  [new RegExp("^(\\([" + HG + "]\\))\\s*(.*)$"), "l5"],
+  [/^([①-⑳])\s*(.*)$/, "l6"],
+  [/^([㉮-㉻])\s*(.*)$/, "l7"],
   [/^([-·•∙])\s*(.*)$/, "bul"],
   [/^(※)\s*(.*)$/, "note"],
   [/^([^:：\s][^:：]{0,11})\s*[:：]\s+(.+)$/, "kv"]
@@ -46,7 +56,7 @@ export function formatText(text) {
       const m = line.match(re);
       if (!m) continue;
       const row = mk("div", "ln ln-" + kind);
-      row.append(mk("span", "mk", kind === "bul" ? "·" : kind === "l1" ? m[1] + "." : m[1]), mk("span", "tx", m[2]));
+      row.append(mk("span", "mk", kind === "bul" ? "·" : m[1]), mk("span", "tx", m[2]));
       box.append(row); return;
     }
     box.append(mk("div", "ln ln-p", line));
@@ -56,6 +66,8 @@ export function formatText(text) {
 
 // 공고 내용 → 차례대로 놓을 덩어리들 (모양: table 표형 · number 번호형 · guide 안내형)
 function blocks(n) {
+  if (formOf(n) === "letter") return blocksLetter(n);
+  if (formOf(n) === "home") return blocksHome(n);
   const out = [], layout = layoutOf(n);
   const head = mk("div", "a4-head");
   const meta = mk("div", "a4-meta");
@@ -79,6 +91,82 @@ function blocks(n) {
   return out;
 }
 
+// ── 공문 (행정기관 표준 기안문 형식: 두문 · 본문 · 결문)
+//   두문: 행정기관명 / 수신 / (경유) / 제목
+//   본문: 1. 가. 1) … 항목, 본문이 끝나면 2타 띄우고 "끝." (붙임이 있으면 붙임 끝에)
+//   결문: 발신명의 / 기안자·검토자·결재권자 / 협조자 / 시행·접수 / 우편번호·주소·홈페이지 / 전화·전송·전자우편·공개 구분
+const addEnd = (s) => { const t = String(s || "").replace(/\s+$/, ""); return t ? t + "  끝." : t; };
+function blocksLetter(n) {
+  const L = n.letter || {}, out = [];
+  const head = mk("div", "lt-head");
+  if (L.slogan) head.append(mk("p", "lt-slogan", L.slogan));
+  head.append(mk("h1", "lt-org", n.org || "(기관명)"));
+  const meta = mk("div", "lt-meta");
+  const line = (k, v, cls) => { const r = mk("div", "lt-line" + (cls ? " " + cls : "")); r.append(mk("span", "lt-k", k), mk("span", "lt-v", v)); meta.append(r); };
+  line("수신", L.to || "");
+  if (L.via) line("(경유)", L.via);
+  line("제목", n.title || "", "lt-title");
+  head.append(meta);
+  out.push({ node: head });
+  const hasAtt = !!String(L.attach || "").trim();
+  const body = hasAtt ? String(L.body || "").replace(/\s+$/, "") : addEnd(L.body);
+  if (body) out.push({ text: body, make: (t) => { const d = mk("div", "lt-body"); d.append(formatText(t)); return d; } });
+  if (hasAtt) {
+    const lines = String(L.attach).split("\n").map((s) => s.trim()).filter(Boolean);
+    const box = mk("div", "lt-attach");
+    box.append(mk("span", "lt-k", "붙임"));
+    const list = mk("div", "lt-att-list");
+    lines.forEach((s, i) => list.append(mk("div", null, (lines.length > 1 && !/^\d+\./.test(s) ? (i + 1) + ". " : "") + (i === lines.length - 1 ? addEnd(s) : s))));
+    box.append(list); out.push({ node: box });
+  }
+  out.push({ node: mk("p", "lt-sender", L.sender || n.org || "") });
+  const foot = mk("div", "lt-foot");
+  const row = (cells, cls) => { const r = mk("div", "lt-frow" + (cls ? " " + cls : "")); cells.filter((c) => c[1] !== undefined).forEach(([k, v]) => { const c = mk("span", "lt-cell"); c.append(mk("b", null, k), mk("span", null, v || "")); r.append(c); }); foot.append(r); };
+  row([["기안자", L.drafter], ["검토자", L.reviewer], ["결재권자", L.approver]], "lt-sign");
+  if (L.coop) row([["협조자", L.coop]]);
+  row([["시행", (L.docNo || "") + (L.docDate ? " (" + dot(L.docDate) + ")" : "")], ["접수", L.recvNo || ""]]);
+  row([["우", [L.zip, L.addr].filter(Boolean).join(" ")], ["", L.web || ""]]);
+  row([["전화", L.tel || ""], ["전송", L.fax || ""], ["", L.email || ""], ["", L.open || "공개"]]);
+  out.push({ node: foot, keep: true });
+  return out;
+}
+
+// ── 가정통신문 (머리띠 · 인사말 · 항목 · 맺음 · 회신서 절취선)
+function blocksHome(n) {
+  const H = n.home || {}, out = [];
+  const head = mk("div", "hm-head");
+  const band = mk("div", "hm-band");
+  const left = mk("div", "hm-brand"); left.append(mk("b", null, n.org || ""), mk("span", "hm-pill", "가정통신문"));
+  band.append(left, mk("span", "hm-no", [H.no ? "제" + H.no + "호" : "", n.postedAt ? dot(n.postedAt) + "." : ""].filter(Boolean).join("  ·  ")));
+  head.append(band, mk("h1", "a4-title hm-title", n.title || "(제목)"));
+  out.push({ node: head, head: true });
+  if (n.intro) out.push({ text: n.intro, make: (t) => { const p = mk("div", "hm-greet"); p.append(formatText(t)); return p; } });
+  (n.items || []).filter((i) => !i.hidden && (i.label || i.text)).forEach((it) => {
+    out.push({ row: true, text: it.text || "", make: (t, cont) => {
+      const r = mk("div", "a4-row hm-row");
+      r.append(mk("div", "a4-dt", cont ? (it.label || "") + " (계속)" : it.label || ""));
+      const dd = mk("div", "a4-dd"); dd.append(formatText(t)); r.append(dd); return r;
+    } });
+  });
+  if (n.sign) out.push({ node: mk("p", "a4-sign hm-sign", n.sign) });
+  if (H.reply && H.reply.on) {
+    const slip = mk("div", "hm-slip");
+    slip.append(mk("div", "hm-cut", "✂  절  취  선"));
+    slip.append(mk("p", "hm-slip-title", H.reply.title || "회 신 서"));
+    const lines = mk("div", "hm-slip-body");
+    String(H.reply.text || "").split("\n").forEach((s) => {
+      const r = mk("div", "hm-slip-line");
+      // "이름: ____" 처럼 밑줄 칸은 빈칸 줄로, "□"는 체크 상자로
+      s.split(/(_{3,})/).forEach((part) => { if (/^_{3,}$/.test(part)) r.append(mk("span", "hm-blank")); else if (part) r.append(document.createTextNode(part)); });
+      lines.append(r);
+    });
+    slip.append(lines);
+    slip.append(mk("p", "hm-slip-to", (n.org || "") + " 귀중"));
+    out.push({ node: slip, keep: true });
+  }
+  return out;
+}
+
 // 글을 문장(줄·마침표·띄어쓰기) 단위 조각으로
 // 여러 줄이면 줄 단위로(목록이 중간에 끊기지 않게), 한 줄짜리 긴 글이면 낱말 단위로
 function pieces(t) {
@@ -92,7 +180,10 @@ export function renderA4(host, n, opts = {}) {
   host.textContent = "";
   host.classList.add("a4-host");
   host.classList.toggle("a4-flow", narrow);
-  LAYOUTS.forEach(([k]) => host.classList.toggle("lay-" + k, layoutOf(n) === k));
+  host._a4Last = { n, opts };
+  const form = formOf(n);
+  FORMS.forEach(([k]) => host.classList.toggle("form-" + k, form === k));
+  LAYOUTS.forEach(([k]) => host.classList.toggle("lay-" + k, form === "notice" && layoutOf(n) === k));
   // 항목 이름 칸 너비: 가장 긴 이름이 한 줄에 들어가게 (줄바꿈 없음)
   const probe = mk("article", "a4"); probe.style.cssText = "visibility:hidden;position:absolute;left:-9999px;top:0;height:auto;display:block";
   host.append(probe);
@@ -119,7 +210,9 @@ export function renderA4(host, n, opts = {}) {
       if (!fits() && body.children.length > 1) {
         b.node.remove();
         // 맺음(날짜·명의)이 다음 쪽에 혼자 남지 않게 바로 앞 항목과 함께 넘김
-        const prev = body.lastElementChild, carry = b.node.classList.contains("a4-sign") && prev && prev.classList.contains("a4-row") && body.querySelectorAll(".a4-row").length > 2 ? prev : null;
+        // 결문(공문 아래칸)·회신서는 바로 앞 덩어리(발신명의·맺음)와 함께 넘김
+        const prev = body.lastElementChild;
+        const carry = prev && body.children.length > 1 && ((b.node.classList.contains("a4-sign") && prev.classList.contains("a4-row") && body.querySelectorAll(".a4-row").length > 2) || (b.keep && !prev.classList.contains("a4-row") && !prev.classList.contains("lt-head"))) ? prev : null;
         if (carry) { carry.remove(); carry.classList.remove("first"); }
         newPage(); if (carry) place(carry); place(b.node);
       }
@@ -156,10 +249,11 @@ export function renderA4(host, n, opts = {}) {
       new ResizeObserver(() => {
         const nw = host.clientWidth; if (Math.abs(nw - w) < 2) return; w = nw;
         // 좁은 화면 ↔ 넓은 화면을 넘나들면 다시 그림, 아니면 크기만 맞춤
-        if (!opts.forceA4 && ((nw < 600) !== host.classList.contains("a4-flow"))) renderA4(host, n, opts); else fitScale(host);
+        const last = host._a4Last;
+        if (!last.opts.forceA4 && ((nw < 600) !== host.classList.contains("a4-flow"))) renderA4(host, last.n, last.opts); else fitScale(host);
       }).observe(host);
     }
-    if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => renderA4(host, n, opts));
+    if (document.fonts && document.fonts.status !== "loaded") document.fonts.ready.then(() => { const last = host._a4Last; renderA4(host, last.n, last.opts); });
   }
   return pages.length;
 }
