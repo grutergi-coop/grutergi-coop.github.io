@@ -1,0 +1,28 @@
+# Cloudflare Pages 서버 보안 머리글 (모든 화면에 적용)
+# 화면 안의 보안 규칙(CSP)은 각 HTML에 그대로 있고, 여기서는 HTML로는 걸 수 없는 것만 더합니다.
+/*
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Content-Security-Policy: frame-ancestors 'none'; upgrade-insecure-requests
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()
+  Cross-Origin-Opener-Policy: same-origin-allow-popups
+
+# 관리자·조합원 화면: 검색 노출 금지, 브라우저에 저장하지 않음
+/admin/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+/member/*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
+# 저장소 안내·규칙 파일은 검색에 잡히지 않게
+/README.md
+  X-Robots-Tag: noindex
+/firestore.rules
+  X-Robots-Tag: noindex
+
+# 미리보기 배포 주소(xxxx.프로젝트.pages.dev)는 검색에 잡히지 않게
+https://:version.:project.pages.dev/*
+  X-Robots-Tag: noindex
