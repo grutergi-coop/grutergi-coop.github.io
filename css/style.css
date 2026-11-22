@@ -433,7 +433,7 @@ html[data-theme="dark"] .adm-page input:not([type=checkbox]):hover,html[data-the
 .say .w.gold{color:var(--gold)}
 .js-scroll:not(.still) .say .w.gold{color:#fff}
 .js-scroll:not(.still) .say .w.gold.on{color:var(--gold)}
-.say footer{margin-top:clamp(28px,4vh,40px);display:flex;flex-wrap:wrap;gap:4px 16px;font-size:15px;color:rgba(255,255,255,.62)}
+.say footer{margin-top:clamp(24px,4vh,44px);display:flex;flex-wrap:wrap;align-items:center;gap:4px 18px;font-size:clamp(13px,calc(.8vw + 7px),19px);line-height:1.5;color:rgba(255,255,255,.66)}
 .say cite{font-style:normal;font-weight:700;color:var(--gold)}
 
 
@@ -701,9 +701,16 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
 .rt .ln{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:.45em;align-items:baseline}
 .rt .ln-p,.rt .ln-gap{display:block}
 .rt .ln-gap{height:.45em}
-.rt .ln-l1{padding-left:.1em}
-.rt .ln-l2{padding-left:1.5em}
-.rt .ln-l1 .mk,.rt .ln-agenda .mk{font-weight:700}
+/* 단계별 들여쓰기 (공문 기준: 1. → 가. → 1) → 가) → (1) → (가) → ① → ㉮, 단계마다 2타) */
+.rt .ln-n0{padding-left:0}
+.rt .ln-l1{padding-left:1.1em}.rt .ln-l2{padding-left:2.2em}.rt .ln-l3{padding-left:3.3em}
+.rt .ln-l4{padding-left:4.4em}.rt .ln-l5{padding-left:5.5em}.rt .ln-l6{padding-left:6.6em}.rt .ln-l7{padding-left:7.7em}
+/* 공고·가정통신문 항목 안에서는 한 단계 덜 들여씀 */
+.a4-dd .rt .ln-n0,.a4-dd .rt .ln-l1{padding-left:.1em}
+.a4-dd .rt .ln-l2,.a4-dd .rt .ln-l3{padding-left:1.4em}
+.a4-dd .rt .ln-l4,.a4-dd .rt .ln-l5{padding-left:2.6em}
+.a4-dd .rt .ln-l6,.a4-dd .rt .ln-l7{padding-left:3.8em}
+.rt .ln-n0 .mk,.rt .ln-l1 .mk,.rt .ln-agenda .mk{font-weight:700}
 .rt .ln-agenda{grid-template-columns:3.6em minmax(0,1fr)}
 .rt .ln-agenda .mk{color:#1F5C3D;font-variant-numeric:tabular-nums}
 .rt .ln-bul{padding-left:.2em}
@@ -793,3 +800,95 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
 .tpl-pick small{font-size:12.5px;color:var(--muted);line-height:1.45}
 .fmt-help{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13px;color:var(--muted)}
 .fmt-help code{font-family:inherit;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--ink)}
+
+/* ── 공문 (행정기관 표준 기안문 형식) */
+.lt-head{display:flex;flex-direction:column;gap:8px}
+.lt-slogan{text-align:center;font-size:12.5px;color:#55625A;margin:0}
+.lt-org{font-family:var(--f-head);font-size:25px;text-align:center;letter-spacing:.1em;margin:2px 0 10px;line-height:1.3}
+.lt-meta{display:flex;flex-direction:column;gap:5px}
+.lt-line{display:grid;grid-template-columns:4.2em minmax(0,1fr);align-items:baseline}
+.lt-k{font-weight:700;letter-spacing:.04em}
+.lt-title{border-bottom:2px solid #1A2420;padding-bottom:10px;margin-bottom:4px}
+.lt-title .lt-v{font-weight:700;font-size:15.5px}
+.lt-body{line-height:1.8}
+.lt-body .rt{gap:3px}
+.lt-attach{display:grid;grid-template-columns:4.2em minmax(0,1fr);align-items:baseline;line-height:1.8}
+.lt-sender{font-family:var(--f-head);font-size:22px;text-align:center;letter-spacing:.12em;margin:30px 0 8px}
+.lt-foot{margin-top:auto;border-top:2px solid #1A2420;padding-top:10px;font-size:12px;line-height:1.6;color:#2A3530;display:flex;flex-direction:column;gap:5px}
+.lt-frow{display:flex;flex-wrap:wrap;gap:4px 22px}
+.lt-cell b{font-weight:700;margin-right:6px}
+.lt-cell b:empty{display:none}
+.lt-sign{padding-bottom:8px;border-bottom:1px solid #C7CFC9;margin-bottom:2px}
+.lt-sign .lt-cell{min-width:30%}
+
+/* ── 가정통신문 */
+.hm-head{display:flex;flex-direction:column;gap:8px}
+.hm-band{display:flex;justify-content:space-between;align-items:center;gap:12px;background:#1F5C3D;color:#fff;border-radius:10px;padding:11px 16px}
+.hm-brand{display:flex;align-items:center;gap:10px}
+.hm-brand b{font-size:15.5px;letter-spacing:.02em}
+.hm-pill{background:#fff;color:#1F5C3D;border-radius:999px;padding:2px 10px;font-size:12.5px;font-weight:700}
+.hm-no{font-size:12.5px;opacity:.92;white-space:nowrap}
+.hm-title{color:#173F2B;margin:6px 0 2px}
+.hm-greet{background:#F4F7F2;border-radius:10px;padding:11px 16px;line-height:1.7}
+.form-home .a4-row,.form-home .a4-row.first{display:block;border:0;padding:2px 0 4px}
+.form-home .a4-row+.a4-row{margin-top:-4px}
+.form-home .a4-dt{padding:1px 0 1px 11px;border-left:3px solid #2E7D55;color:#173F2B;font-size:14.5px;line-height:1.3;margin-bottom:5px}
+.form-home .a4-dd{padding:0 0 0 15px}
+.hm-sign{margin-top:6px;line-height:1.7}
+.hm-slip{margin-top:auto;display:flex;flex-direction:column;gap:5px;padding-top:4px}
+.hm-cut{display:flex;align-items:center;gap:12px;font-size:12px;color:#6B776F;letter-spacing:.1em}
+.hm-cut::before,.hm-cut::after{content:"";flex:1;border-top:1.5px dashed #8C978F}
+.hm-slip-title{text-align:center;font-size:17px;font-weight:700;letter-spacing:.3em;margin:2px 0}
+.hm-slip-body{border:1px solid #9AA59E;border-radius:6px;padding:10px 16px;display:flex;flex-direction:column;gap:7px;font-size:14px}
+.hm-slip-line{min-height:1.5em}
+.hm-blank{display:inline-block;min-width:150px;border-bottom:1px solid #2A3530;height:1.1em;margin:0 6px;vertical-align:-3px}
+.hm-slip-to{text-align:right;font-weight:700;font-size:15px;margin:2px 4px 0}
+
+/* ── 공고 모양 ⑦ 게시판형 — 큰 제목 띠, 굵은 안내 (벽·게시판 부착용) */
+.lay-poster .a4-meta{border-bottom:0;font-size:12.5px}
+.lay-poster .a4-org{font-size:16px;font-weight:700;color:#1F5C3D}
+.lay-poster .a4-title{background:#1F5C3D;color:#fff;font-size:40px;line-height:1.25;padding:22px 16px;border-radius:14px;margin:4px 0 8px}
+.lay-poster .a4-intro{font-size:16.5px;line-height:1.75;text-align:center;padding:0 16px}
+.lay-poster .a4-intro .rt .ln{justify-content:center}
+.lay-poster .a4-row{grid-template-columns:var(--lw,124px) minmax(0,1fr);border-bottom:1.5px dashed #B9C6BC;padding:6px 0}
+.lay-poster .a4-row.first{border-top:2.5px solid #1F5C3D}
+.lay-poster .a4-dt{color:#1F5C3D;font-size:16px}
+.lay-poster .a4-dd{font-size:16.5px;font-weight:500}
+.lay-poster .a4-sign{font-size:17px;margin-top:26px}
+.a4-flow .lt-line,.a4-flow .lt-attach{grid-template-columns:3.6em minmax(0,1fr)}
+.a4-flow .hm-band{flex-direction:column;align-items:flex-start}
+.a4-flow.lay-poster .a4-title{font-size:28px}
+
+/* ── 말씀 아래 출처 · 설명: 본문 글자 크기에 맞춰 함께 줄고 늘어남, 좁은 화면에서는 두 줄로 정돈 */
+.say cite{display:inline-flex;align-items:center;gap:.6em}
+.say cite::before{content:"";width:1.8em;height:1.5px;background:currentColor;opacity:.8}
+@media (max-width:599px){
+  .say footer{flex-direction:column;gap:2px}
+  .say footer span{font-size:.92em;padding-left:2.4em}
+}
+
+/* ── 첫 화면 머리글 가독성: 그림 위에서도 로고 글씨·메뉴가 또렷하게 */
+.home .site-header::before{content:"";position:absolute;left:0;right:0;top:0;bottom:-28px;z-index:-1;pointer-events:none;transition:opacity .4s;
+  background:linear-gradient(180deg,rgba(246,249,244,.86) 0%,rgba(246,249,244,.6) 55%,rgba(246,249,244,0) 100%)}
+.home .site-header.solid::before,.home .site-header.dark::before{opacity:0}
+.home .site-header .brand b,.home .site-header .nav a{text-shadow:0 1px 1px rgba(255,255,255,.55)}
+.home .site-header .brand small{color:#3F4D45}
+.home .site-header .btn-line{background:rgba(255,255,255,.72)}
+.home .site-header.dark .brand b,.home .site-header.dark .nav a{text-shadow:none}
+.home .site-header.dark .btn-line{background:transparent}
+/* 밤 화면: 위쪽이 어두우므로 어두운 막 + 흰 글씨 */
+@media (min-width:768px){
+  .night .home .site-header:not(.solid):not(.dark)::before{background:linear-gradient(180deg,rgba(12,28,30,.78) 0%,rgba(12,28,30,.5) 55%,rgba(12,28,30,0) 100%)}
+  .night .home .site-header:not(.solid):not(.dark) .brand,.night .home .site-header:not(.solid):not(.dark) .nav a{color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  .night .home .site-header:not(.solid):not(.dark) .brand small{color:rgba(255,255,255,.82)}
+  .night .home .site-header:not(.solid):not(.dark) .nav a.strong{color:var(--gold)}
+  .night .home .site-header:not(.solid):not(.dark) .btn-line{color:#fff;border-color:rgba(255,255,255,.7);background:rgba(255,255,255,.08)}
+}
+@media (max-width:767px){
+  .home .site-header::before{bottom:-36px}
+  .home .site-header.solid::before{opacity:1}
+  .night .home .site-header::before{opacity:1;background:linear-gradient(180deg,rgba(12,28,30,.8) 0%,rgba(12,28,30,.5) 55%,rgba(12,28,30,0) 100%)}
+  .night .home .site-header .brand{color:#fff}
+  .night .home .site-header .brand b{text-shadow:0 1px 3px rgba(0,0,0,.45)}
+  .night .home .site-header .brand small{color:rgba(255,255,255,.85)}
+}
