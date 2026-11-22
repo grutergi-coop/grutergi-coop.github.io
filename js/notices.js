@@ -3,6 +3,7 @@
 import { db, el, setText } from "./fb.js";
 import { collection, getDocs, doc, getDoc, query, where } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { NOTICES } from "./defaults.js";
+import { renderA4 } from "./paper.js";
 
 const statusClass = (s) => /게시 중/.test(s) ? "pill-live" : /마감|종료|비공개/.test(s) ? "pill-off" : "pill-info";
 const fmt = (d) => String(d || "").replace(/-/g, ".");
@@ -38,25 +39,18 @@ async function renderList() {
 async function renderView() {
   const box = document.getElementById("notice-paper");
   if (!box) return;
+  const say = (m) => { box.textContent = ""; box.append(el("p", { class: "muted", style: "text-align:center;padding:48px 0" }, m)); };
   const id = new URLSearchParams(location.search).get("id") || "";
-  if (!/^[A-Za-z0-9_-]{1,60}$/.test(id)) { setText(document.getElementById("n-title"), "공고를 찾을 수 없습니다."); return; }
+  if (!/^[A-Za-z0-9_-]{1,60}$/.test(id)) return say("공고를 찾을 수 없습니다.");
   let n = null;
   try { const s = await getDoc(doc(db, "notices", id)); if (s.exists()) n = s.data(); } catch {}
   if (!n && NOTICES[id]) n = NOTICES[id];
-  if (!n || n.published === false) { setText(document.getElementById("n-title"), "공고를 찾을 수 없습니다."); return; }
-  if (waiting(n)) { setText(document.getElementById("n-title"), "이 공고는 " + fmt(n.postedAt) + "에 게시됩니다."); return; }
+  if (!n || n.published === false) return say("공고를 찾을 수 없습니다.");
+  if (waiting(n)) return say("이 공고는 " + fmt(n.postedAt) + "에 게시됩니다.");
   document.title = n.title + " · 그루터기 사회적협동조합(가칭)";
-  setText(document.getElementById("n-no"), n.kind === "공고" ? "공고 제" + n.no + "호" : n.kind);
-  setText(document.getElementById("n-period"), n.periodEnd ? "게시 기간 " + fmt(n.postedAt) + " ~ " + fmt(n.periodEnd) : "게시 " + fmt(n.postedAt));
-  setText(document.getElementById("n-org"), n.org || "");
-  setText(document.getElementById("n-title"), n.title);
-  setText(document.getElementById("n-intro"), n.intro);
-  const dl = document.getElementById("n-items"); dl.textContent = "";
-  (n.items || []).filter((it) => !it.hidden).forEach((it) => { dl.append(el("dt", null, it.label), el("dd", null, it.text)); });
-  setText(document.getElementById("n-sign"), n.sign);
-  const h = document.getElementById("n-history"); h.textContent = "";
-  h.append("변경 이력: ");
-  (n.history || []).forEach((x, i) => { if (i) h.append(" · "); h.append(fmt(x.at) + " " + x.note); });
+  renderA4(box, n);
+  const pr = document.getElementById("n-print");
+  if (pr) { pr.hidden = false; pr.addEventListener("click", () => window.print()); }
 }
 
 renderList();
