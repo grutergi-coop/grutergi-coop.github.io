@@ -7,7 +7,7 @@
 import { auth, db, el } from "../js/fb.js";
 import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSession, logLogin } from "../js/session.js";
 import { HOME, NOTICES } from "../js/defaults.js";
-import { renderA4, LAYOUTS } from "../js/paper.js";
+import { renderA4, LAYOUTS, FORMS } from "../js/paper.js";
 import { TEMPLATES } from "./templates.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
@@ -361,6 +361,10 @@ function editNotice(n) {
   const isNew = !n, today = kstDay();
   const d = n ? structuredClone(n) : { no: "", kind: "공고", title: "", status: "게시 중", postedAt: today, periodEnd: "", published: false, scheduled: true, org: "그루터기 사회적협동조합(가칭)", intro: "", items: [{ label: "1. ", text: "" }], sign: "", history: [], layout: "number" };
   let layout = LAYOUTS.some((l) => l[0] === d.layout) ? d.layout : "number";
+  let form = FORMS.some((x) => x[0] === d.form) ? d.form : "notice";
+  const L0 = d.letter || {}, H0 = d.home || {}, R0 = H0.reply || {};
+  const titleOf = (p, s) => { const h = p.querySelector(".panel-head h3"); if (h) h.textContent = s; };
+  const labelOf = (fl, s) => { const l = fl.w.querySelector("label"); if (l) l.textContent = s; };
   // 공고는 게시 전후 언제든 고칠 수 있고, 공개 화면에 변경 이력을 남기지 않음
   // (고치기 전 내용은 타임머신에, 누가 언제 고쳤는지는 관리자 활동 기록에 그대로 남음)
   const preNow = () => isNew || (!!d.postedAt && today < d.postedAt);
@@ -383,12 +387,16 @@ function editNotice(n) {
   const setMode = (m) => { wrap.dataset.mode = m; segE.setAttribute("aria-selected", String(m === "edit")); segP.setAttribute("aria-selected", String(m === "prev")); if (m === "edit") requestAnimationFrame(sizeAll); };
   segE.onclick = () => setMode("edit"); segP.onclick = () => { setMode("prev"); refresh(); };
 
-  // ── 규격틀 고르기 (새 공고만): 고르면 항목 이름·예시 문구·모양이 미리 채워짐
-  let applyTpl = null;
-  if (isNew) {
-    const pT = panel("규격틀 고르기", "틀을 고르면 항목과 예시 문구가 채워집니다. [ ] 안만 바꿔 적으면 됩니다.", ed);
-    const picks = el("div", { class: "tpl-picks" }); pT.append(picks);
-    TEMPLATES.forEach((tp) => {
+  // ── 문서 종류: 공고·안내 / 공문 / 가정통신문
+  const pK = panel("문서 종류", null, ed);
+  const kSeg = el("div", { class: "seg", role: "radiogroup", "aria-label": "문서 종류", style: "display:inline-flex" }); pK.append(kSeg);
+  FORMS.forEach(([k, name]) => { const b = el("button", { type: "button", "data-k": k, "aria-selected": "false" }, name); b.addEventListener("click", () => { if (form !== k) { setForm(k, true); markDirty(); } }); kSeg.append(b); });
+
+  // ── 규격틀 고르기 (새 문서만): 고르면 항목 이름·예시 문구·모양이 미리 채워짐
+  let applyTpl = null, picks = null;
+  const paintTpl = () => {
+    if (!picks) return; picks.textContent = "";
+    TEMPLATES.filter((tp) => tp.form === form).forEach((tp) => {
       const b = el("button", { class: "tpl-pick", type: "button", "aria-pressed": "false" });
       b.append(el("b", null, tp.name), el("small", null, tp.desc));
       b.addEventListener("click", () => {
@@ -399,6 +407,10 @@ function editNotice(n) {
       });
       picks.append(b);
     });
+  };
+  if (isNew) {
+    const pT = panel("규격틀 고르기", "틀을 고르면 항목과 예시 문구가 채워집니다. [ ] 안만 바꿔 적으면 됩니다.", ed);
+    picks = el("div", { class: "tpl-picks" }); pT.append(picks);
   }
 
   // ── 게시 상태
@@ -440,6 +452,47 @@ function editNotice(n) {
   f.title = field("제목", d.title, { max: 200, wide: true });
   g.append(f.title.w, idF.w, f.kind.w, f.no.w, f.org.w);
 
+  // ── 공문 입력 (두문 · 본문 · 결문 · 기관 정보)
+  const lt = {};
+  const pLH = panel("공문 머리 (두문)", "행정기관명 자리에는 위 '공고 주체'(기관명)가 들어갑니다.", ed);
+  const gLH = el("div", { class: "grid-2" }); pLH.append(gLH);
+  lt.slogan = field("기관 표어 (선택)", L0.slogan, { max: 60, wide: true, placeholder: "예: 아이와 부모와 교사가 함께 자라는 마을" });
+  lt.to = field("수신", L0.to, { max: 120, placeholder: "예: 경기도지사(사회적경제과장) / 조합원 여러분" });
+  lt.via = field("(경유)", L0.via, { max: 120, help: "거치는 기관이 있을 때만 적습니다" });
+  gLH.append(lt.slogan.w, lt.to.w, lt.via.w);
+  const pLB = panel("공문 본문", "본문이 끝나면(붙임이 있으면 붙임 끝에) 두 칸 띄우고 '끝.'이 자동으로 붙습니다.", ed);
+  const lHelp = el("div", { class: "fmt-help" });
+  lHelp.append(el("span", null, "항목 기호 순서:"));
+  ["1.", "가.", "1)", "가)", "(1)", "(가)", "①"].forEach((c, i) => { lHelp.append(el("code", null, c)); if (i < 6) lHelp.append(el("span", null, "→")); });
+  lHelp.append(el("span", null, "· 단계마다 자동으로 들여씁니다"));
+  pLB.append(lHelp);
+  lt.body = field("본문", L0.body, { max: 6000, multi: true, rows: 8 });
+  lt.attach = field("붙임 (한 줄에 하나씩)", L0.attach, { max: 1000, multi: true, rows: 2, placeholder: "예: 정관(안) 1부." });
+  pLB.append(lt.body.w, lt.attach.w);
+  const pLF = panel("결문 · 결재", null, ed);
+  const gLF = el("div", { class: "grid-2" }); pLF.append(gLF);
+  lt.sender = field("발신명의", L0.sender, { max: 80, wide: true, placeholder: "예: 그루터기 사회적협동조합(가칭) 이사장" });
+  lt.drafter = field("기안자 (직위 성명)", L0.drafter, { max: 40 });
+  lt.reviewer = field("검토자 (직위 성명)", L0.reviewer, { max: 40 });
+  lt.approver = field("결재권자 (직위 성명)", L0.approver, { max: 40 });
+  lt.coop = field("협조자 (선택)", L0.coop, { max: 60 });
+  lt.docNo = field("시행 번호", L0.docNo, { max: 40, placeholder: "예: 그루터기-2026-001" });
+  lt.docDate = field("시행일", L0.docDate, { type: "date" });
+  lt.recvNo = field("접수 (받은 곳에서 적음, 선택)", L0.recvNo, { max: 40 });
+  gLF.append(lt.sender.w, lt.drafter.w, lt.reviewer.w, lt.approver.w, lt.coop.w, lt.docNo.w, lt.docDate.w, lt.recvNo.w);
+  const pLO = panel("기관 정보", "한 번 적어 저장하면 이 기기에서 새 공문을 쓸 때 자동으로 채워집니다.", ed);
+  const gLO = el("div", { class: "grid-2" }); pLO.append(gLO);
+  lt.zip = field("우편번호", L0.zip, { max: 10 });
+  lt.addr = field("주소", L0.addr, { max: 120 });
+  lt.web = field("홈페이지", L0.web, { max: 80 });
+  lt.tel = field("전화", L0.tel, { max: 30 });
+  lt.fax = field("전송 (팩스)", L0.fax, { max: 30 });
+  lt.email = field("전자우편", L0.email, { max: 80 });
+  lt.open = field("공개 구분", L0.open || "공개", { max: 20, placeholder: "공개 / 부분공개 / 비공개" });
+  gLO.append(lt.zip.w, lt.addr.w, lt.web.w, lt.tel.w, lt.fax.w, lt.email.w, lt.open.w);
+  const ORG_KEYS = ["slogan", "zip", "addr", "web", "tel", "fax", "email"];
+  const lettersPanels = [pLH, pLB, pLF, pLO];
+
   // ── 본문 (항목 블록: 순서 바꾸기 · 잠시 숨기기 · 빼기)
   const pB = panel("본문", "항목은 ▲▼로 순서를 바꾸고, ‘숨기기’로 지우지 않고 잠시 감출 수 있습니다.", ed);
   const help = el("div", { class: "fmt-help" });
@@ -468,12 +521,27 @@ function editNotice(n) {
   pB.append(btn("+ 항목 더하기", "btn-add", () => { addItem({ label: (box.children.length + 1) + ". ", text: "" }, true); markDirty(); }));
   const sign = field("맺음 (날짜와 명의, 줄바꿈 가능)", d.sign, { max: 300, multi: true, rows: 3 }); pB.append(sign.w);
 
+  // ── 가정통신문 회신서 (절취선)
+  const pR = panel("회신서 (절취선)", "켜면 문서 맨 아래에 잘라서 보내는 회신서가 붙습니다. ____ 는 빈칸 줄, □ 는 체크 상자로 나옵니다.", ed);
+  const rOn = check("회신서 붙이기", !!R0.on); pR.append(rOn.w);
+  const rTitle = field("회신서 제목", R0.title || "회 신 서", { max: 30 });
+  const rText = field("회신서 내용 (한 줄씩)", R0.text, { max: 800, multi: true, rows: 4, placeholder: "원아 이름: ____    반: ____" });
+  pR.append(rTitle.w, rText.w);
+
   // 규격틀 적용: 칸을 틀 내용으로 채움
   applyTpl = (tp) => {
-    f.kind.input.value = tp.kind; f.title.input.value = tp.title; intro.input.value = tp.intro; sign.input.value = tp.sign;
-    box.textContent = ""; tp.items.forEach(([label, text]) => addItem({ label, text }));
-    layout = tp.layout; paintLayout();
-    [f.kind, f.title].forEach((x) => x.input.dispatchEvent(new Event("input", { bubbles: true })));
+    setForm(tp.form, true);
+    f.kind.input.value = tp.kind; f.title.input.value = tp.title;
+    if (tp.org) f.org.input.value = tp.org;
+    if (tp.form === "letter") {
+      Object.entries(tp.letter || {}).forEach(([k, v]) => { if (lt[k]) lt[k].input.value = v; });
+    } else {
+      intro.input.value = tp.intro || ""; sign.input.value = tp.sign || "";
+      box.textContent = ""; (tp.items || []).forEach(([label, text]) => addItem({ label, text }));
+      if (tp.layout) { layout = tp.layout; paintLayout(); }
+      if (tp.reply) { rOn.input.checked = !!tp.reply.on; rTitle.input.value = tp.reply.title || "회 신 서"; rText.input.value = tp.reply.text || ""; }
+    }
+    view.querySelectorAll("input,textarea").forEach((x) => x.dispatchEvent(new Event("input", { bubbles: true })));
     requestAnimationFrame(sizeAll); markDirty(); refresh();
   };
 
@@ -482,11 +550,37 @@ function editNotice(n) {
   pH.append(el("p", { class: "callout" }, "게시한 뒤에도 언제든 고칠 수 있고, 공개 화면에 변경 이력은 표시하지 않습니다. 고치기 전 내용은 아래 타임머신에 자동으로 보관되어 언제든 되돌릴 수 있습니다."));
   const warn = el("p", { class: "sub" }, "참고: 일시·장소, 조합원 자격요건, 의결 사항을 게시 후에 바꾸면, 바뀐 내용이 총회 7일 전까지 게시되어 있어야 합니다(시행령 제17조)."); pH.append(warn);
 
+  // 문서 종류 바꾸기: 종류에 맞는 입력 상자만 보이게
+  function setForm(k, fillOrg) {
+    form = k;
+    kSeg.querySelectorAll("button").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.k === k)));
+    pL.hidden = k !== "notice"; pB.hidden = k === "letter"; pR.hidden = k !== "home"; pH.hidden = false;
+    lettersPanels.forEach((p) => { p.hidden = k !== "letter"; });
+    f.no.w.hidden = k === "letter"; f.periodEnd.w.hidden = k !== "notice";
+    labelOf(f.no, k === "home" ? "통신문 호수" : "공고 번호");
+    labelOf(f.org, k === "letter" ? "행정기관명 (발신 기관)" : k === "home" ? "기관명 (머리띠)" : "공고 주체");
+    labelOf(f.postedAt, k === "notice" ? "게시일" : "작성일");
+    labelOf(intro, k === "home" ? "인사말" : "머리말");
+    titleOf(pB, k === "home" ? "가정통신문 본문" : "본문");
+    if (k === "letter") f.kind.input.value = "공문"; else if (k === "home") f.kind.input.value = "가정통신문"; else if (/공문|가정통신문/.test(f.kind.input.value)) f.kind.input.value = "공고";
+    // 새 공문이면 이 기기에 기억해 둔 기관 정보를 채움
+    if (k === "letter" && fillOrg !== false) {
+      let mem = {}; try { mem = JSON.parse(localStorage.getItem("gr-letter-org") || "{}"); } catch {}
+      ORG_KEYS.forEach((key) => { if (lt[key] && !lt[key].input.value && typeof mem[key] === "string") lt[key].input.value = mem[key].slice(0, 120); });
+    }
+    paintTpl(); requestAnimationFrame(sizeAll); refresh();
+  }
+
   const collect = () => ({
     kind: f.kind.input.value.trim(), no: f.no.input.value.trim(), title: f.title.input.value.trim(), status: f.status.input.value.trim(),
     postedAt: f.postedAt.input.value, periodEnd: f.periodEnd.input.value, org: f.org.input.value.trim(),
     published: pub.input.checked, scheduled: sch.input.checked, layout,
-    intro: intro.input.value.trim(), items: [...box.children].map((i) => i._get()).filter((i) => i.label || i.text), sign: sign.input.value.trim()
+    intro: form === "letter" ? "" : intro.input.value.trim(),
+    items: form === "letter" ? [] : [...box.children].map((i) => i._get()).filter((i) => i.label || i.text),
+    sign: form === "letter" ? "" : sign.input.value.trim(),
+    form,
+    ...(form === "letter" ? { letter: Object.fromEntries(Object.entries(lt).map(([k, x]) => [k, x.input.value.trim()])) } : {}),
+    ...(form === "home" ? { home: { no: f.no.input.value.trim(), reply: { on: rOn.input.checked, title: rTitle.input.value.trim(), text: rText.input.value.replace(/\s+$/, "") } } } : {})
   });
   // 보안 규칙상 history 칸이 필요해 '최초 게시' 한 줄만 둠 (날짜는 게시일에 맞춤, 화면에는 표시하지 않음)
   const nextHistory = (c) => [{ at: c.postedAt || today, note: "최초 게시" }];
@@ -495,13 +589,13 @@ function editNotice(n) {
     const st = noticeState(c);
     stLine.textContent = ""; stLine.append(el("span", { class: "pill " + st.cls }, st.label));
     stLine.append(el("span", null, !c.published ? "홈페이지에 보이지 않습니다." : pre && c.scheduled ? dot(c.postedAt) + "부터 홈페이지에 보입니다. 그 전에는 공고 목록에 나타나지 않습니다." : pre ? "지금도 홈페이지에 보입니다. 게시일 전에 숨기려면 ‘예약 게시’를 켜세요." : "홈페이지에 게시 중입니다."));
-    warn.hidden = pre;
+    warn.hidden = pre || form !== "notice";
     if (!pvBack.hidden || !pv.offsetParent) return;   // 미리보기가 보일 때만 다시 그림 (안 보이면 쪽 나눔을 잴 수 없음)
     showPaper(c);
   }
   let rt; ed.addEventListener("input", () => { clearTimeout(rt); rt = setTimeout(refresh, 120); });
   ed.addEventListener("change", () => refresh());
-  refresh();
+  setForm(form, isNew);
 
   saveBar(async () => {
     const id = (isNew ? idF.input.value : n.id).trim();
@@ -516,7 +610,8 @@ function editNotice(n) {
       const next = { ...c, history: nextHistory(c), updatedAt: serverTimestamp(), updatedBy: me.email };
       if (cur.exists()) { const { updatedAt, ...old } = cur.data(); await snapshot("notices/" + id, old); }
       await setDoc(ref, next);
-      await audit(isNew ? "공고 작성" : "공고 수정", "notices/" + id);
+      await audit(isNew ? "문서 작성" : "문서 수정", "notices/" + id);
+      if (c.form === "letter") { try { localStorage.setItem("gr-letter-org", JSON.stringify(Object.fromEntries(ORG_KEYS.map((k) => [k, c.letter[k] || ""])))); } catch {} }
       toast("저장했습니다"); cleanState(); editNotice({ id, ...next, updatedAt: null });
     } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); return false; }
   }, ...(isNew ? [] : [el("a", { href: "../notice/view.html?id=" + encodeURIComponent(n.id), target: "_blank", rel: "noopener" }, "공개 화면 열기 ↗")]));
