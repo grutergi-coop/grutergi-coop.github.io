@@ -668,11 +668,11 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
 .a4-org{text-align:center;font-size:15px;margin:4px 0 0}
 .a4-title{font-family:var(--f-head);font-size:27px;line-height:1.35;text-align:center;letter-spacing:-.01em;margin:0 0 2px}
 .a4-intro{white-space:pre-line;margin:0}
-.a4-row{display:grid;grid-template-columns:124px minmax(0,1fr);border-bottom:1px solid #D9DED9}
+.a4-row{display:grid;grid-template-columns:var(--lw,124px) minmax(0,1fr);border-bottom:1px solid #D9DED9}
 .a4-row.first{border-top:2px solid #1A2420}
 .a4-row+.a4-row{margin-top:-14px}
 .a4-dt,.a4-dd{padding:9px 8px}
-.a4-dt{font-weight:700}
+.a4-dt{font-weight:700;white-space:nowrap}
 .a4-dd{white-space:pre-line}
 .a4-sign{white-space:pre-line;text-align:center;font-size:15px;line-height:1.85;margin:18px 0 0}
 /* 좁은 화면(휴대폰): 한 장으로 흘려 보여 줌 */
@@ -695,3 +695,101 @@ img.ring-art{height:auto;max-width:min(100%,72vh);justify-self:center;mix-blend-
   .a4{transform:none!important;box-shadow:none;border:0;width:210mm;height:297mm}
   .a4-flow .a4{position:static;width:210mm;height:auto;padding:19mm 20mm}
 }
+
+/* ── 공고문 글 정돈 (자동 목록) */
+.rt{display:flex;flex-direction:column;gap:2px}
+.rt .ln{display:grid;grid-template-columns:auto minmax(0,1fr);column-gap:.45em;align-items:baseline}
+.rt .ln-p,.rt .ln-gap{display:block}
+.rt .ln-gap{height:.45em}
+.rt .ln-l1{padding-left:.1em}
+.rt .ln-l2{padding-left:1.5em}
+.rt .ln-l1 .mk,.rt .ln-agenda .mk{font-weight:700}
+.rt .ln-agenda{grid-template-columns:3.6em minmax(0,1fr)}
+.rt .ln-agenda .mk{color:#1F5C3D;font-variant-numeric:tabular-nums}
+.rt .ln-bul{padding-left:.2em}
+.rt .ln-bul .mk{font-weight:700;color:#1F5C3D}
+.rt .ln-note{font-size:.92em;color:#4E5C54;margin-top:4px}
+.rt .ln-kv{grid-template-columns:auto minmax(0,1fr)}
+.rt .ln-kv .mk{font-weight:700}
+.rt .ln-kv .mk::after{content:" :"}
+.a4-intro .rt{gap:4px}
+.a4-flow .a4-dt{white-space:normal}
+
+/* 모양 ① 표형 — 왼쪽 항목 이름, 오른쪽 내용 (지금 방식) */
+/* 모양 ② 번호형 — 공문서식: "1. 일시 : …", 내용이 길면 다음 줄부터 들여써서 */
+.lay-number .a4-row,.lay-number .a4-row.first{display:block;border:0;padding:1px 0}
+.lay-number .a4-row+.a4-row{margin-top:-4px}
+.lay-number .a4-dt,.lay-number .a4-dd{padding:0}
+.lay-number .a4-dt{font-size:14.5px;margin-bottom:2px}
+.lay-number .a4-dd{padding-left:1.6em}
+.lay-number .a4-row.inline{display:grid;grid-template-columns:var(--lw,124px) minmax(0,1fr);align-items:baseline}
+.lay-number .a4-row.inline .a4-dt{margin:0;font-size:inherit}
+.lay-number .a4-row.inline .a4-dt::after{content:" :";font-weight:400}
+.lay-number .a4-row.inline .a4-dd{padding-left:0}
+.lay-number .a4-intro{padding-bottom:6px;border-bottom:1px solid #1A2420}
+/* 모양 ③ 안내형 — 초록 표시 막대가 붙은 소제목, 넉넉한 간격 */
+.lay-guide .a4-meta{border-bottom-color:#1F5C3D}
+.lay-guide .a4-title{color:#173F2B}
+.lay-guide .a4-intro{background:#F2F6F1;border-radius:10px;padding:12px 16px}
+.lay-guide .a4-row,.lay-guide .a4-row.first{display:block;border:0;padding:2px 0 4px}
+.lay-guide .a4-row+.a4-row{margin-top:-4px}
+.lay-guide .a4-dt{padding:1px 0 1px 11px;border-left:3px solid #2E7D55;color:#173F2B;font-size:14.5px;line-height:1.3;margin-bottom:5px}
+.lay-guide .a4-dd{padding:0 0 0 15px}
+.lay-guide .rt .ln-note{background:#F7F5EE;border-radius:8px;padding:5px 10px;display:grid}
+.lay-guide .a4-sign{border-top:1px solid #DDE3DD;padding-top:18px}
+/* 모양 ④ 격자표형 — 칸마다 테두리, 항목 칸 연한 음영 */
+.lay-grid .a4-row{border:1px solid #9AA59E;border-top:0;margin:0}
+.lay-grid .a4-row.first{border-top:1.5px solid #1A2420}
+.lay-grid .a4-row+.a4-row{margin-top:-14px}
+.lay-grid .a4-dt{background:#EEF2EE;border-right:1px solid #9AA59E;text-align:center;display:flex;align-items:center;justify-content:center}
+.lay-grid .a4-dd{padding:9px 12px}
+.lay-grid .a4-row:last-of-type{border-bottom:1.5px solid #1A2420}
+/* 모양 ⑤ 관공서형 — 맨 위 기관명, 겹줄, 명의는 오른쪽 */
+.lay-official .a4-org{order:-1;font-family:var(--f-head);font-size:19px;letter-spacing:.06em;margin:0;padding-bottom:10px;border-bottom:3px double #1A2420}
+.lay-official .a4-meta{border:0;padding:0;font-size:13.5px;color:#1A2420}
+.lay-official .a4-title{font-size:28px;margin:6px 0 4px}
+.lay-official .a4-row,.lay-official .a4-row.first{display:block;border:0;padding:1px 0}
+.lay-official .a4-row+.a4-row{margin-top:-4px}
+.lay-official .a4-dt,.lay-official .a4-dd{padding:0}
+.lay-official .a4-dt{margin-bottom:2px}
+.lay-official .a4-dd{padding-left:1.6em}
+.lay-official .a4-sign{text-align:right;padding-right:8px}
+/* 모양 ⑥ 카드형 — 항목마다 둥근 상자, 부드러운 안내문 */
+.lay-card .a4-meta{border-bottom:0;background:#F1F5F0;border-radius:8px;padding:6px 12px}
+.lay-card .a4-title{color:#173F2B}
+.lay-card .a4-row,.lay-card .a4-row.first{display:block;border:1px solid #DCE4DC;border-radius:12px;padding:10px 14px;background:#FBFCFA}
+.lay-card .a4-row+.a4-row{margin-top:-6px}
+.lay-card .a4-dt,.lay-card .a4-dd{padding:0}
+.lay-card .a4-dt{color:#1F5C3D;font-size:14.5px;margin-bottom:4px}
+.lay-card .a4-sign{margin-top:10px}
+.lay-official .a4-row.inline{display:grid;grid-template-columns:var(--lw,124px) minmax(0,1fr);align-items:baseline}
+.lay-official .a4-row.inline .a4-dt{margin:0}
+.lay-official .a4-row.inline .a4-dt::after{content:" :";font-weight:400}
+.lay-official .a4-row.inline .a4-dd{padding-left:0}
+
+/* ── 관리자: 문서 모양 고르기 · 규격틀 고르기 */
+.lay-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.lay-pick{font:inherit;text-align:left;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:10px 12px;cursor:pointer;display:flex;flex-direction:column;gap:6px;min-height:44px}
+.lay-pick:hover{border-color:var(--green)}
+.lay-pick[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft);box-shadow:0 0 0 2px var(--green-soft)}
+.lay-pick b{font-size:14.5px}
+.lay-pick small{font-size:12.5px;color:var(--muted);line-height:1.4}
+.lay-mini{display:block;height:46px;border-radius:6px;background:#fff;border:1px solid #DDE2DC;position:relative;overflow:hidden}
+.lay-mini i{position:absolute;left:10%;right:10%;height:3px;border-radius:2px;background:#C9D2CB}
+.lay-mini i:nth-child(1){top:7px;left:30%;right:30%;height:4px;background:#5B6B61}
+.lay-mini i:nth-child(2){top:17px}.lay-mini i:nth-child(3){top:25px}.lay-mini i:nth-child(4){top:33px}.lay-mini i:nth-child(5){top:41px;right:40%}
+.lay-mini.m-table i:nth-child(n+2),.lay-mini.m-grid i:nth-child(n+2){left:34%}
+.lay-mini.m-table::before,.lay-mini.m-grid::before{content:"";position:absolute;left:10%;width:18%;top:15px;bottom:4px;background:repeating-linear-gradient(#C9D2CB 0 3px,transparent 3px 8px)}
+.lay-mini.m-grid{background:linear-gradient(90deg,#fff 0 9%,#EEF2EE 9% 30%,#fff 30%)}
+.lay-mini.m-grid::after{content:"";position:absolute;left:9%;right:9%;top:14px;bottom:3px;border:1px solid #9AA59E}
+.lay-mini.m-official i:nth-child(1){top:5px;left:20%;right:20%;border-bottom:3px double #5B6B61;height:6px;background:none}
+.lay-mini.m-guide i:nth-child(n+2){left:16%;border-left:3px solid #2E7D55}
+.lay-mini.m-card i:nth-child(n+2){height:6px;border-radius:3px;background:#E5ECE5}
+.lay-mini.m-number i:nth-child(n+3){left:18%}
+.tpl-picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.tpl-pick{font:inherit;text-align:left;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:12px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:4px}
+.tpl-pick:hover,.tpl-pick[aria-pressed="true"]{border-color:var(--green);background:var(--green-soft)}
+.tpl-pick b{font-size:15px}
+.tpl-pick small{font-size:12.5px;color:var(--muted);line-height:1.45}
+.fmt-help{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13px;color:var(--muted)}
+.fmt-help code{font-family:inherit;background:var(--field);border:1px solid var(--line);border-radius:6px;padding:1px 7px;color:var(--ink)}
