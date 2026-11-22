@@ -1,6 +1,6 @@
 // ═══════════════════════════════════════════════════════════════
 // 관리자 화면 — 그루터기 사회적협동조합(가칭)
-// 대시보드 · 홈 화면 · 공고 · 문의 · 조합원 · 보안·기록(접속 현황/로그인 기록/활동 기록/오류 알림판/보안 설정)
+// 대시보드 · 방문 통계 · 홈 화면 · 공고 · 문의 · 조합원 · 보안·기록(접속 현황/로그인 기록/활동 기록/오류 알림판/보안 설정)
 // 권한은 화면이 아니라 데이터베이스 보안 규칙(admins 목록)이 지킵니다.
 // 모든 내용은 글자로만 넣습니다(HTML 해석 없음). 저장 직전 내용은 타임머신(snapshots)에 보관합니다.
 // ═══════════════════════════════════════════════════════════════
@@ -9,6 +9,7 @@ import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSes
 import { HOME, NOTICES } from "../js/defaults.js";
 import { renderA4, LAYOUTS, FORMS } from "../js/paper.js";
 import { TEMPLATES } from "./templates.js";
+import { lineChart, barChart, hBars, donut, heatmap, table, fmt, pct } from "./charts.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, where, orderBy, limit,
@@ -210,7 +211,7 @@ function bindTabs() {
 function go(tab) {
   document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab)));
   clear();
-  ({ dash, home, notices, inq, members, sec })[tab]();
+  ({ dash, stats, home, notices, inq, members, sec })[tab]();
   window.scrollTo({ top: 0 });
 }
 async function refreshInqBadge() {
@@ -233,17 +234,13 @@ async function dash() {
   const last7 = days.slice(7).reduce((s, d) => s + (byDay[d]?.total || 0), 0);
   kWeek.textContent = String(last7);
 
-  const p = panel("최근 14일 방문 (같은 기기의 같은 화면은 하루 1번)");
-  const bars = el("div", { class: "bars" }); const max = Math.max(1, ...days.map((d) => byDay[d]?.total || 0));
-  days.forEach((d) => {
-    const v = byDay[d]?.total || 0; const col = el("div");
-    const bar = el("i"); bar.style.height = Math.round((v / max) * 100) + "%";
-    col.append(el("em", null, v ? String(v) : ""), bar, el("small", null, d.slice(5).replace("-", ".")));
-    bars.append(col);
-  });
-  p.append(bars);
+  const p = panel("최근 14일 방문", "같은 기기의 같은 화면은 하루 1번만 셉니다");
+  const box = el("div", { class: "cx-box" }); p.append(box);
+  lineChart(box, { labels: days.map((d) => d.slice(5).replace("-", ".")), series: [{ name: "방문", values: days.map((d) => byDay[d]?.total || 0), cls: "c1" }], height: 180, title: (i) => dayTitle(days[i]) });
   const sum = (k) => days.slice(7).reduce((s, d) => s + (byDay[d]?.[k] || 0), 0);
-  p.append(el("p", { class: "sub muted" }, `최근 7일 기기: 폰 ${sum("mobile")} · 패드 ${sum("tablet")} · 컴퓨터 ${sum("desktop")}  |  화면: 첫 화면 ${sum("home")} · 공고 ${sum("notice")} · 조합원 ${sum("member")}`));
+  const more = el("div", { class: "cx-more" });
+  more.append(el("span", { class: "sub muted" }, `최근 7일 기기: 폰 ${sum("mobile")} · 패드 ${sum("tablet")} · 컴퓨터 ${sum("desktop")}`), btn("방문 통계 자세히", null, () => openTab("stats")));
+  p.append(more);
 
   const inqs = await getDocs(query(collection(db, "inquiries"), where("status", "==", "new"))).catch(() => null);
   kInq.textContent = String(inqs ? inqs.size : 0);
@@ -257,6 +254,86 @@ async function dash() {
     const q = panel("답변이 필요한 문의"); const list = el("div", { class: "list" }); q.append(list);
     inqs.docs.slice(0, 5).forEach((d) => { const v = d.data(); const row = el("div", { class: "row" }); const a = el("button", { class: "link", type: "button" }, `[${v.category}] ${v.name}`); a.onclick = () => { document.querySelectorAll(".adm-side [data-tab]").forEach((t) => t.setAttribute("aria-selected", String(t.dataset.tab === "inq"))); openInq(d.id); }; row.append(a, el("span", { class: "sub" }, when(v.createdAt))); list.append(row); });
   }
+}
+
+// ═══ 방문 통계 (그래프)
+const WEEK = ["일", "월", "화", "수", "목", "금", "토"];
+const dayTitle = (d) => { const [y, m, dd] = d.split("-").map(Number); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); return `${m}월 ${dd}일 (${WEEK[w]})`; };
+function openTab(tab) { document.querySelectorAll(".adm-side [data-tab]").forEach((b) => b.setAttribute("aria-selected", String(b.dataset.tab === tab))); clear(); ({ dash, stats, home, notices, inq, members, sec })[tab](); window.scrollTo({ top: 0 }); }
+let statRange = 30;
+const HOURS = [...Array(24)].map((_, i) => "h" + String(i).padStart(2, "0"));
+const LABEL = {
+  home: "첫 화면", notice: "공고", member: "조합원 화면", admin: "관리자 화면", other: "기타",
+  mobile: "휴대폰", tablet: "태블릿", desktop: "컴퓨터",
+  os_ios: "iOS (아이폰·아이패드)", os_android: "안드로이드", os_win: "윈도우", os_mac: "맥", os_etc: "기타",
+  br_safari: "사파리", br_chrome: "크롬", br_samsung: "삼성 인터넷", br_naver: "네이버 앱·웨일", br_kakao: "카카오톡 안", br_edge: "엣지", br_etc: "기타",
+  src_direct: "주소 직접 입력·즐겨찾기", src_search: "검색 (네이버·구글 등)", src_sns: "카카오톡·SNS 공유", src_etc: "다른 사이트 링크"
+};
+async function stats() {
+  const seg = el("div", { class: "seg keep", role: "radiogroup", "aria-label": "기간" });
+  [[7, "7일"], [30, "30일"], [90, "90일"]].forEach(([n, l]) => { const b = el("button", { type: "button", "aria-selected": String(n === statRange) }, l); b.onclick = () => { statRange = n; openTab("stats"); }; seg.append(b); });
+  h2("방문 통계", seg, btn("새로 고침", null, () => openTab("stats")));
+  view.append(el("p", { class: "sub muted cx-note" }, "누가 왔는지는 기록하지 않고, 하루 단위 숫자만 셉니다. 같은 기기의 같은 화면은 하루 1번만 셉니다. 시간은 한국 시간입니다."));
+
+  const N = statRange;
+  const days = [...Array(N)].map((_, i) => kstDay(new Date(Date.now() - (N - 1 - i) * 864e5)));
+  const prev = [...Array(N)].map((_, i) => kstDay(new Date(Date.now() - (2 * N - 1 - i) * 864e5)));
+  const vs = await getDocs(query(collection(db, "visits"), where(documentId(), ">=", prev[0]))).catch(() => null);
+  if (!vs) { view.append(el("p", { class: "muted" }, "통계를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.")); return; }
+  const by = {}; vs.forEach((d) => { by[d.id] = d.data(); });
+  const tot = (list, k) => list.reduce((s, d) => s + (by[d]?.[k] || 0), 0);
+
+  // 1) 숫자 요약
+  const cur = tot(days, "total"), before = tot(prev, "total");
+  const uv = tot(days, "uv"), nv = tot(days, "nv");
+  const hourSum = HOURS.map((hk) => tot(days, hk));
+  const peak = hourSum.some((v) => v) ? hourSum.indexOf(Math.max(...hourSum)) : -1;
+  const kpis = el("div", { class: "kpis" }); view.append(kpis);
+  const kpi = (label, value, note, up) => {
+    const k = el("div", { class: "kpi" }); k.append(el("span", null, label), el("b", null, value));
+    if (note) k.append(el("small", { class: "kpi-note" + (up === true ? " up" : up === false ? " down" : "") }, note));
+    kpis.append(k);
+  };
+  const diff = before ? Math.round(((cur - before) / before) * 100) : null;
+  kpi(`방문 (${N}일)`, fmt(cur), diff === null ? "지난 기간 자료 없음" : `지난 ${N}일보다 ${diff >= 0 ? "▲ " + diff : "▼ " + Math.abs(diff)}%`, diff === null ? null : diff >= 0);
+  kpi("하루 평균", fmt(Math.round((cur / N) * 10) / 10), `오늘 ${fmt(by[days[N - 1]]?.total || 0)}회`);
+  kpi("방문한 기기", uv ? fmt(uv) : "–", uv ? `처음 온 기기 ${pct(nv, uv)}%` : "11월 22일부터 셉니다");
+  kpi("가장 많이 오는 시간", peak < 0 ? "–" : `${peak}시`, peak < 0 ? "11월 22일부터 셉니다" : `${peak}시~${peak + 1}시`);
+
+  // 2) 날짜별 추이 (이번 기간 · 지난 기간)
+  const pT = panel("날짜별 방문", `최근 ${N}일 (실선)과 그 전 ${N}일 (점선) 비교`);
+  const bT = el("div", { class: "cx-box" }); pT.append(bT);
+  const lbl = days.map((d) => d.slice(5).replace("-", "."));
+  lineChart(bT, { labels: lbl, series: [{ name: `최근 ${N}일`, values: days.map((d) => by[d]?.total || 0), cls: "c1" }, { name: `그 전 ${N}일`, values: prev.map((d) => by[d]?.total || 0), cls: "cprev", dashed: true }], title: (i) => dayTitle(days[i]) });
+  const tWrap = el("details", { class: "cx-details" }); tWrap.append(el("summary", null, "표로 보기"));
+  table(tWrap, ["날짜", "방문", "휴대폰", "태블릿", "컴퓨터", "첫 화면", "공고"], [...days].reverse().map((d) => [dayTitle(d), fmt(by[d]?.total || 0), fmt(by[d]?.mobile || 0), fmt(by[d]?.tablet || 0), fmt(by[d]?.desktop || 0), fmt(by[d]?.home || 0), fmt(by[d]?.notice || 0)]));
+  pT.append(tWrap);
+
+  const grid = el("div", { class: "cx-grid2" }); view.append(grid);
+  // 3) 시간대
+  const pH = panel("시간대별 방문", "한국 시간 기준, 몇 시에 많이 들어오는지", grid);
+  const bH = el("div", { class: "cx-box" }); pH.append(bH);
+  if (hourSum.some((v) => v)) barChart(bH, { labels: [...Array(24)].map((_, i) => String(i)), values: hourSum, title: (i) => `${i}시 ~ ${i + 1}시`, highlight: peak });
+  else bH.append(el("p", { class: "cx-empty" }, "11월 22일부터 시간대를 셉니다. 방문이 쌓이면 여기에 그래프가 나옵니다."));
+  // 4) 기기
+  const pD = panel("기기 종류", null, grid);
+  donut(pD, [["mobile", "c1"], ["tablet", "c2"], ["desktop", "c3"]].map(([k, c]) => ({ label: LABEL[k], value: tot(days, k), cls: c })), { center: `${N}일 방문` });
+
+  // 5) 요일 × 시간
+  const pW = panel("요일 · 시간대", "칸이 진할수록 그 요일 그 시간에 많이 들어왔습니다");
+  const hv = WEEK.map(() => Array(24).fill(0));
+  days.forEach((d) => { const [y, m, dd] = d.split("-").map(Number); const w = new Date(Date.UTC(y, m - 1, dd)).getUTCDay(); HOURS.forEach((hk, i) => { hv[w][i] += by[d]?.[hk] || 0; }); });
+  const order = [1, 2, 3, 4, 5, 6, 0];
+  if (hourSum.some((v) => v)) heatmap(pW, { rows: order.map((i) => WEEK[i]), cols: [...Array(24)].map((_, i) => String(i)), values: order.map((i) => hv[i]) });
+  else pW.append(el("p", { class: "cx-empty" }, "11월 22일부터 셉니다."));
+
+  // 6) 갈래별 비율
+  const grid2 = el("div", { class: "cx-grid4" }); view.append(grid2);
+  const list = (title, hint, keys, unit) => { const pp = panel(title, hint, grid2); hBars(pp, keys.map((k) => ({ label: LABEL[k], value: tot(days, k) })), { unit }); };
+  list("많이 본 화면", "화면 종류별 방문", ["home", "notice", "member", "admin", "other"], "회");
+  list("들어온 경로", "하루 첫 방문 기준 · 주소는 기록하지 않음", ["src_direct", "src_search", "src_sns", "src_etc"], "대");
+  list("운영체제", "하루 첫 방문 기준", ["os_ios", "os_android", "os_win", "os_mac", "os_etc"], "대");
+  list("브라우저", "하루 첫 방문 기준", ["br_safari", "br_chrome", "br_samsung", "br_naver", "br_kakao", "br_edge", "br_etc"], "대");
 }
 
 // ═══ 홈 화면 내용
