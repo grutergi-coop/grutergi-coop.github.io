@@ -1,7 +1,7 @@
 // 스크롤 연출 (스크롤텔링) — 장면을 화면에 붙잡아 두고, 내려가는 만큼 그림과 글이 바뀝니다.
 //   첫 화면: 그림이 천천히 다가오고 글이 위로 사라짐
 //   중심 말씀: 한 단어씩 밝아짐 · 비전: 그림과 글이 차례로 바뀜
-//   걸어온 길: 연혁 단계마다 그루터기가 커지고 나이테가 늘어남 · 어린이집: 사진이 화면 가득 펼쳐짐 · 나머지: 화면에 들어오면 한 번 떠오름
+//   걸어온 길: 연혁 단계마다 나무 단면에 나이테가 한 겹씩 쌓임 · 어린이집: 사진이 화면 가득 펼쳐짐 · 나머지: 화면에 들어오면 한 번 떠오름
 // '동작 줄이기'를 켠 기기, 아주 낮은 화면에서는 붙잡지 않고 모두 펼쳐 보여 줌 (CSS가 처리)
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -15,7 +15,7 @@ const still = () => mqReduce.matches || mqShort.matches;
 const hdr = $("#hdr"), hero = $("#s-hero"), about = $("#about"), vis = $("#s-vision"), ringsSec = $("#rings"), kids = $("#kids"), call = $("#s-call");
 const GOLD = ["지혜", "빛", "별", "영원토록"];
 let words = [], rings = [], tlItems = [];
-const trees = $$("#tree-art img"); // 연혁 단계별 그루터기 그림 (작은 그루터기 → 나이테가 촘촘한 큰 그루터기)
+const trees = $$("#tree-art img"); // 연혁 단계별 나무 단면 (안쪽 나이테는 그대로, 바깥에 새 나이테가 쌓임)
 const darks = [about, call, $("#inquiry"), $(".site-footer")].filter(Boolean);
 
 // 중심 말씀을 단어로 나눔 (글자만 다룸)
@@ -95,7 +95,7 @@ function frame() {
     $$("#s-vision .dots b").forEach((b, i) => { b.style.width = (clamp(p * items.length - i) * 100).toFixed(1) + "%"; });
   }
   if (ringsSec && tlItems.length) {
-    // 내려갈수록 연혁이 하나씩 밝아지고, 그루터기가 그 단계만큼 커짐
+    // 내려갈수록 연혁이 하나씩 밝아지고, 나무 단면에 나이테가 그 단계만큼 쌓임
     const p = prog(ringsSec), m = Math.min(tlItems.length - 1, Math.floor(p * tlItems.length * 1.05));
     ringsSec.style.setProperty("--r", ((m + 1) / tlItems.length).toFixed(3));
     rings.forEach((c, i) => on(c, i <= m));
