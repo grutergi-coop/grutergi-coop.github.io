@@ -998,3 +998,13 @@ html:not(.js-scroll) .tree-art img:last-child,.still .tree-art img:last-child{op
   .tree-art img.on,html:not(.js-scroll) .tree-art img:last-child,.still .tree-art img:last-child{opacity:.4}
 }
 @media (prefers-reduced-motion:reduce){.tree-art img{transition:none}}
+
+/* ── 걸어온 길: 그루터기 단면(투명 배경) — 연혁 단계마다 그루터기가 커지고 나이테가 늘어남 */
+.stump-art{aspect-ratio:1000/800;max-width:min(100%,calc(64vh * 1000 / 800));align-self:center}
+.stump-art img{mix-blend-mode:normal;filter:none;transition:opacity .9s ease,transform .9s cubic-bezier(.2,.7,.2,1);transform:scale(.96);transform-origin:50% 96%}
+.stump-art img.on{transform:none}
+@media (max-width:860px){
+  .stump-art{right:-24%;bottom:2%;width:92vw;max-width:520px}
+  .stump-art img.on,html:not(.js-scroll) .stump-art img:last-child,.still .stump-art img:last-child{opacity:.32}
+}
+@media (prefers-reduced-motion:reduce){.stump-art img{transform:none;transition:none}}
