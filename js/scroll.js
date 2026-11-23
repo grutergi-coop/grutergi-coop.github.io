@@ -1,7 +1,7 @@
 // 스크롤 연출 (스크롤텔링) — 장면을 화면에 붙잡아 두고, 내려가는 만큼 그림과 글이 바뀝니다.
 //   첫 화면: 그림이 천천히 다가오고 글이 위로 사라짐
 //   중심 말씀: 한 단어씩 밝아짐 · 비전: 그림과 글이 차례로 바뀜
-//   나이테: 한 해씩 고리가 퍼짐 · 어린이집: 사진이 화면 가득 펼쳐짐 · 나머지: 화면에 들어오면 한 번 떠오름
+//   걸어온 길: 연혁 단계마다 나무가 자라남 · 어린이집: 사진이 화면 가득 펼쳐짐 · 나머지: 화면에 들어오면 한 번 떠오름
 // '동작 줄이기'를 켠 기기, 아주 낮은 화면에서는 붙잡지 않고 모두 펼쳐 보여 줌 (CSS가 처리)
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -15,6 +15,7 @@ const still = () => mqReduce.matches || mqShort.matches;
 const hdr = $("#hdr"), hero = $("#s-hero"), about = $("#about"), vis = $("#s-vision"), ringsSec = $("#rings"), kids = $("#kids"), call = $("#s-call");
 const GOLD = ["지혜", "빛", "별", "영원토록"];
 let words = [], rings = [], tlItems = [];
+const trees = $$("#tree-art img"); // 연혁 단계별 나무 그림 (새싹 → 큰 나무)
 const darks = [about, call, $("#inquiry"), $(".site-footer")].filter(Boolean);
 
 // 중심 말씀을 단어로 나눔 (글자만 다룸)
@@ -70,7 +71,7 @@ function frame() {
     const y = 34, dark = darks.some((s) => { const r = s.getBoundingClientRect(); return r.top <= y && r.bottom >= y; });
     hdr.classList.toggle("dark", dark);
   }
-  if (still()) { words.forEach((w) => on(w, true)); rings.forEach((c) => on(c, true)); tlItems.forEach((l) => on(l, true)); $$("#vision .item, #s-vision .pics img, #keys li").forEach((e) => on(e, true)); return; }
+  if (still()) { words.forEach((w) => on(w, true)); rings.forEach((c) => on(c, true)); trees.forEach((t, i) => on(t, i === trees.length - 1)); tlItems.forEach((l) => on(l, true)); $$("#vision .item, #s-vision .pics img, #keys li").forEach((e) => on(e, true)); return; }
 
   if (hero) hero.style.setProperty("--p", prog(hero).toFixed(4));
 
@@ -94,10 +95,11 @@ function frame() {
     $$("#s-vision .dots b").forEach((b, i) => { b.style.width = (clamp(p * items.length - i) * 100).toFixed(1) + "%"; });
   }
   if (ringsSec && tlItems.length) {
-    // 내려갈수록 나이테 그림이 가운데부터 넓게 드러나고, 해당 연혁이 밝아짐
+    // 내려갈수록 연혁이 하나씩 밝아지고, 나무 그림이 그 단계만큼 자라남
     const p = prog(ringsSec), m = Math.min(tlItems.length - 1, Math.floor(p * tlItems.length * 1.05));
     ringsSec.style.setProperty("--r", ((m + 1) / tlItems.length).toFixed(3));
     rings.forEach((c, i) => on(c, i <= m));
+    trees.forEach((t, i) => on(t, i === Math.min(m, trees.length - 1)));
     tlItems.forEach((l, i) => { on(l, i <= m); l.classList.toggle("cur", i === m); });
   }
   if (kids) {
