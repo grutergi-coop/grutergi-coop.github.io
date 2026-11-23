@@ -1008,3 +1008,13 @@ html:not(.js-scroll) .tree-art img:last-child,.still .tree-art img:last-child{op
   .stump-art img.on,html:not(.js-scroll) .stump-art img:last-child,.still .stump-art img:last-child{opacity:.32}
 }
 @media (prefers-reduced-motion:reduce){.stump-art img{transform:none;transition:none}}
+
+/* ── 걸어온 길: 정면에서 본 나무 단면 — 같은 단면의 안쪽 나이테는 그대로 두고 바깥에 새 나이테가 한 겹씩 더해짐 (투명 배경) */
+.ring-stack{aspect-ratio:1/1;max-width:min(100%,70vh);align-self:center}
+.ring-stack img{mix-blend-mode:normal;filter:none;transition:opacity .9s ease,transform 1.1s cubic-bezier(.2,.7,.2,1);transform:scale(.94);transform-origin:50% 50%}
+.ring-stack img.on{transform:none}
+@media (max-width:860px){
+  .ring-stack{right:-30%;top:50%;bottom:auto;transform:translateY(-50%);width:96vw;max-width:540px}
+  .ring-stack img.on,html:not(.js-scroll) .ring-stack img:last-child,.still .ring-stack img:last-child{opacity:.32}
+}
+@media (prefers-reduced-motion:reduce){.ring-stack img{transform:none;transition:none}}
