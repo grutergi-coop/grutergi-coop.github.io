@@ -198,6 +198,41 @@ export function heatmap(host, { rows, cols, values, unit = "회", colEvery = 3 }
   host.append(grid, lg);
 }
 
+// ── 시·도 칸 지도: 대한민국 모양을 닮은 칸 배치, 진할수록 많이 들어온 지역
+//   tiles: [{ label, short, value, col, row }]  (col·row는 0부터)
+export function tileMap(host, tiles, { unit = "대" } = {}) {
+  const max = Math.max(1, ...tiles.map((t) => t.value));
+  const total = tiles.reduce((a, b) => a + b.value, 0);
+  const cols = Math.max(...tiles.map((t) => t.col)) + 1, rows = Math.max(...tiles.map((t) => t.row)) + 1;
+  const map = h("div", "cx-tiles"); map.style.setProperty("--cols", cols); map.style.setProperty("--rows", rows);
+  map.setAttribute("role", "img");
+  map.setAttribute("aria-label", "시·도별 방문 기기: " + tiles.filter((t) => t.value).map((t) => `${t.label} ${t.value}`).join(", ") || "자료 없음");
+  tiles.forEach((t) => {
+    const c = h("div", "cx-tile"); c.style.gridColumn = String(t.col + 1); c.style.gridRow = String(t.row + 1);
+    c.dataset.s = String(t.value ? Math.min(5, 1 + Math.floor((t.value / max) * 4.999)) : 0);
+    c.append(h("span", null, t.short), h("b", null, t.value ? fmt(t.value) : "·"));
+    const show = (ev) => showTip(ev.clientX, ev.clientY, t.label, [["방문 기기", `${fmt(t.value)}${unit} (${pct(t.value, total)}%)`]]);
+    c.addEventListener("pointerenter", show); c.addEventListener("pointerdown", show); c.addEventListener("pointerleave", hideTip);
+    map.append(c);
+  });
+  host.append(map);
+}
+
+// ── 단계별 도달 비율: 기준(예: 방문한 기기) 중 몇 %가 그 단계까지 왔는지
+export function funnel(host, items, base, { unit = "대", baseLabel = "기준" } = {}) {
+  const list = h("div", "cx-hbars");
+  if (!base || !items.some((x) => x.value)) { list.append(h("p", "cx-empty", "아직 모인 자료가 없습니다")); host.append(list); return; }
+  items.forEach((it) => {
+    const p = Math.min(100, pct(it.value, base));
+    const row = h("div", "cx-hrow"); const head = h("div", "cx-hhead");
+    head.append(h("span", null, it.label), h("em", null, `${p}% · ${fmt(it.value)}${unit}`));
+    const track = h("div", "cx-htrack"); const bar = h("i"); bar.style.width = Math.max(1.5, p) + "%";
+    track.append(bar); row.append(head, track); list.append(row);
+  });
+  list.append(h("p", "cx-foot", `${baseLabel} ${fmt(base)}${unit} 중 비율`));
+  host.append(list);
+}
+
 // ── 표로 보기 (그래프를 읽기 어려운 분을 위해 같은 숫자를 표로)
 export function table(host, head, rows) {
   const wrap = h("div", "cx-table-wrap"); const t = h("table", "cx-table");

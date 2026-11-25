@@ -9,7 +9,7 @@ import { usePersistence, googleSignIn, pinProof, lockAdmin, startSession, endSes
 import { HOME, NOTICES } from "../js/defaults.js";
 import { renderA4, LAYOUTS, FORMS } from "../js/paper.js";
 import { TEMPLATES } from "./templates.js";
-import { lineChart, barChart, hBars, donut, heatmap, table, fmt, pct } from "./charts.js";
+import { lineChart, barChart, hBars, donut, heatmap, tileMap, funnel, table, fmt, pct } from "./charts.js";
 import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   doc, getDoc, setDoc, updateDoc, deleteDoc, addDoc, collection, getDocs, query, where, orderBy, limit,
@@ -267,8 +267,24 @@ const LABEL = {
   mobile: "휴대폰", tablet: "태블릿", desktop: "컴퓨터",
   os_ios: "iOS (아이폰·아이패드)", os_android: "안드로이드", os_win: "윈도우", os_mac: "맥", os_etc: "기타",
   br_safari: "사파리", br_chrome: "크롬", br_samsung: "삼성 인터넷", br_naver: "네이버 앱·웨일", br_kakao: "카카오톡 안", br_edge: "엣지", br_etc: "기타",
-  src_direct: "주소 직접 입력·즐겨찾기", src_search: "검색 (네이버·구글 등)", src_sns: "카카오톡·SNS 공유", src_etc: "다른 사이트 링크"
+  src_direct: "주소 직접 입력·즐겨찾기", src_search: "검색 (네이버·구글 등)", src_sns: "카카오톡·SNS 공유", src_etc: "다른 사이트 링크",
+  dv_iphone: "아이폰", dv_ipad: "아이패드", dv_galaxy: "갤럭시 폰", dv_galtab: "갤럭시 탭", dv_android: "다른 안드로이드 폰·패드", dv_mac: "맥 컴퓨터", dv_win: "윈도우 컴퓨터", dv_etc: "기타",
+  sc_1: "작은 폰 (380px 미만)", sc_2: "보통·큰 폰 (380~599px)", sc_3: "패드 세로·작은 창 (600~1023px)", sc_4: "패드 가로·노트북 (1024~1599px)", sc_5: "큰 모니터 (1600px 이상)",
+  st_10: "10초 넘게 봄", st_30: "30초 넘게 봄", st_60: "1분 넘게 봄", st_180: "3분 넘게 봄",
+  sd_25: "4분의 1까지", sd_50: "절반까지", sd_75: "4분의 3까지", sd_100: "끝까지 (문의 칸)",
+  rg_abroad: "해외", rg_etc: "알 수 없음"
 };
+// 시·도 칸 지도 배치 [칸 이름, 이름, 짧은 이름, 열, 행]
+const REGION_TILES = [
+  ["gyeonggi", "경기도", "경기", 1, 0], ["gangwon", "강원특별자치도", "강원", 2, 0],
+  ["incheon", "인천광역시", "인천", 0, 1], ["seoul", "서울특별시", "서울", 1, 1], ["chungbuk", "충청북도", "충북", 2, 1], ["gyeongbuk", "경상북도", "경북", 3, 1],
+  ["chungnam", "충청남도", "충남", 0, 2], ["sejong", "세종특별자치시", "세종", 1, 2], ["daejeon", "대전광역시", "대전", 2, 2], ["daegu", "대구광역시", "대구", 3, 2], ["ulsan", "울산광역시", "울산", 4, 2],
+  ["jeonbuk", "전북특별자치도", "전북", 1, 3], ["gyeongnam", "경상남도", "경남", 3, 3], ["busan", "부산광역시", "부산", 4, 3],
+  ["gwangju", "광주광역시", "광주", 0, 4], ["jeonnam", "전라남도", "전남", 1, 4],
+  ["jeju", "제주특별자치도", "제주", 0, 5]
+];
+REGION_TILES.forEach(([k, name]) => { LABEL["rg_" + k] = name; });
+const SINCE_V5 = "11월 25일부터 셉니다";
 async function stats() {
   const seg = el("div", { class: "seg keep", role: "radiogroup", "aria-label": "기간" });
   [[7, "7일"], [30, "30일"], [90, "90일"]].forEach(([n, l]) => { const b = el("button", { type: "button", "aria-selected": String(n === statRange) }, l); b.onclick = () => { statRange = n; openTab("stats"); }; seg.append(b); });
@@ -281,6 +297,9 @@ async function stats() {
   const vs = await getDocs(query(collection(db, "visits"), where(documentId(), ">=", prev[0]))).catch(() => null);
   if (!vs) { view.append(el("p", { class: "muted" }, "통계를 불러오지 못했습니다. 잠시 뒤 다시 시도해 주세요.")); return; }
   const by = {}; vs.forEach((d) => { by[d.id] = d.data(); });
+  // 지역·기기 종류·화면 폭·머문 시간은 '방문 수 더 보기'(visitx)에 따로 있어 날짜별로 합칩니다
+  const xs = await getDocs(query(collection(db, "visitx"), where(documentId(), ">=", prev[0]))).catch(() => null);
+  if (xs) xs.forEach((d) => { by[d.id] = Object.assign(by[d.id] || {}, d.data()); });
   const tot = (list, k) => list.reduce((s, d) => s + (by[d]?.[k] || 0), 0);
 
   // 1) 숫자 요약
@@ -316,7 +335,7 @@ async function stats() {
   if (hourSum.some((v) => v)) barChart(bH, { labels: [...Array(24)].map((_, i) => String(i)), values: hourSum, title: (i) => `${i}시 ~ ${i + 1}시`, highlight: peak });
   else bH.append(el("p", { class: "cx-empty" }, "11월 22일부터 시간대를 셉니다. 방문이 쌓이면 여기에 그래프가 나옵니다."));
   // 4) 기기
-  const pD = panel("기기 종류", null, grid);
+  const pD = panel("기기 크기", "휴대폰·태블릿·컴퓨터", grid);
   donut(pD, [["mobile", "c1"], ["tablet", "c2"], ["desktop", "c3"]].map(([k, c]) => ({ label: LABEL[k], value: tot(days, k), cls: c })), { center: `${N}일 방문` });
 
   // 5) 요일 × 시간
@@ -334,24 +353,61 @@ async function stats() {
   list("들어온 경로", "하루 첫 방문 기준 · 주소는 기록하지 않음", ["src_direct", "src_search", "src_sns", "src_etc"], "대");
   list("운영체제", "하루 첫 방문 기준", ["os_ios", "os_android", "os_win", "os_mac", "os_etc"], "대");
   list("브라우저", "하루 첫 방문 기준", ["br_safari", "br_chrome", "br_samsung", "br_naver", "br_kakao", "br_edge", "br_etc"], "대");
+
+  // 7) 지역 (시·도)
+  const rgKeys = [...REGION_TILES.map(([k]) => "rg_" + k), "rg_abroad", "rg_etc"];
+  const rgTotal = rgKeys.reduce((a, k) => a + tot(days, k), 0);
+  const pR = panel("어느 지역에서 들어왔나", "하루 첫 방문 기준 · 시·도까지만 셉니다 (IP 주소·동네는 기록하지 않음)");
+  if (!rgTotal) pR.append(el("p", { class: "cx-empty" }, SINCE_V5 + ". 방문이 쌓이면 지도와 목록이 나옵니다."));
+  else {
+    const split = el("div", { class: "cx-split" }); pR.append(split);
+    const mapBox = el("div"); const listBox = el("div"); split.append(mapBox, listBox);
+    tileMap(mapBox, REGION_TILES.map(([k, name, short, col, row]) => ({ label: name, short, col, row, value: tot(days, "rg_" + k) })));
+    hBars(listBox, rgKeys.map((k) => ({ label: LABEL[k], value: tot(days, k) })), { unit: "대" });
+  }
+  pR.append(el("p", { class: "cx-caveat" }, "인터넷 주소로 추정한 지역이라 정확하지 않을 수 있습니다. 특히 휴대폰 데이터(LTE·5G)로 들어오면 통신사 위치(주로 서울·경기)로 잡히는 일이 많고, 와이파이로 들어오면 더 정확합니다."));
+
+  // 8) 기기 종류 · 화면 폭
+  const grid3 = el("div", { class: "cx-grid2" }); view.append(grid3);
+  const list3 = (title, hint, keys) => { const pp = panel(title, hint, grid3); const t = keys.reduce((a, k) => a + tot(days, k), 0);
+    if (!t) pp.append(el("p", { class: "cx-empty" }, SINCE_V5 + "."));
+    else hBars(pp, keys.map((k) => ({ label: LABEL[k], value: tot(days, k) })), { unit: "대" }); };
+  list3("기기 종류", "하루 첫 방문 기준 · 모델명은 보내지 않고 갈래만 셉니다", ["dv_iphone", "dv_ipad", "dv_galaxy", "dv_galtab", "dv_android", "dv_mac", "dv_win", "dv_etc"]);
+  list3("화면 폭", "하루 첫 방문 기준 · 화면을 어느 크기로 보는지 (디자인 점검용)", ["sc_1", "sc_2", "sc_3", "sc_4", "sc_5"]);
+
+  // 9) 얼마나 머물렀나 · 첫 화면을 얼마나 읽었나
+  const grid4 = el("div", { class: "cx-grid2" }); view.append(grid4);
+  const stBase = tot(days, "uv");
+  const pS = panel("얼마나 머물렀나", "화면을 실제로 보고 있던 시간 · 기기마다 하루 한 번", grid4);
+  const stHas = ["st_10", "st_30", "st_60", "st_180"].some((k) => tot(days, k));
+  if (!stHas) pS.append(el("p", { class: "cx-empty" }, SINCE_V5 + "."));
+  else funnel(pS, ["st_10", "st_30", "st_60", "st_180"].map((k) => ({ label: LABEL[k], value: tot(days, k) })), stBase, { baseLabel: "방문한 기기" });
+  const sdBase = tot(days, "home");
+  const pS2 = panel("첫 화면을 얼마나 내려 보았나", "첫 화면 방문 중 그 지점까지 내려 본 비율", grid4);
+  const sdHas = ["sd_25", "sd_50", "sd_75", "sd_100"].some((k) => tot(days, k));
+  if (!sdHas) pS2.append(el("p", { class: "cx-empty" }, SINCE_V5 + "."));
+  else funnel(pS2, ["sd_25", "sd_50", "sd_75", "sd_100"].map((k) => ({ label: LABEL[k], value: tot(days, k) })), sdBase, { unit: "회", baseLabel: "첫 화면 방문" });
 }
 
 // ═══ 홈 화면 내용
 const HOME_TEXT = [
   ["eyebrow", "맨 위 작은 글씨", 80], ["heroTitle", "큰 제목 (줄바꿈 가능)", 80, true], ["heroText", "첫 화면 소개 글", 400, true],
   ["cta1", "첫 번째 단추 글자", 20], ["ctaNotice", "두 번째 단추 글자 (공고 게시판으로 연결)", 20],
-  ["sayText", "중심 말씀 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "말씀 출처", 40], ["sayNote", "말씀 아래 한 줄", 80],
+  ["sayText", "중심 문장 (스크롤하면 한 단어씩 밝아짐)", 200, true], ["sayRef", "중심 문장 아래 작은 제목", 40], ["sayNote", "중심 문장 아래 한 줄", 80],
   ["callTitle", "시대와 부르심 · 큰 문장 (줄바꿈 가능)", 80, true], ["callText", "시대와 부르심 · 설명", 300, true],
   ["keysIntro", "일곱 가지 키워드 제목", 60],
   ["ringsTitle", "연혁(나이테) 제목", 60], ["ringsText", "연혁(나이테) 설명", 300, true],
   ["inquiryTitle", "문의 제목", 60], ["inquiryText", "문의 안내 글", 300, true],
   ["footNote", "맨 아래 안내", 120]
 ];
-async function home() {
+// fill: true면 저장된 내용 위에 '기본 문구'(js/defaults.js)를 채워 보여 줌 — 저장을 눌러야 반영
+async function home(fill = false) {
   const snap = await getDoc(doc(db, "site", "home")).catch(() => null);
   const exists = snap && snap.exists();
-  const data = exists ? snap.data() : structuredClone(HOME);
-  h2("홈 화면 내용");
+  const orig = exists ? snap.data() : structuredClone(HOME);
+  const data = fill ? { ...orig, ...Object.fromEntries([...HOME_TEXT.map(([k]) => k), "keys", "timeline"].map((k) => [k, structuredClone(HOME[k])])) } : orig;
+  h2("홈 화면 내용", btn("기본 문구로 채우기", null, () => { clear(); home(true); }));
+  if (fill) view.append(el("p", { class: "sub cx-note" }, "글 · 일곱 가지 · 연혁 칸을 기본 문구로 채웠습니다. 확인한 뒤 맨 아래 ‘저장’을 눌러야 첫 화면에 반영됩니다. 지금 내용은 저장할 때 타임머신에 보관됩니다."));
   if (!exists) {
     const p = panel("처음 설정");
     p.append(el("p", null, "아직 데이터베이스에 저장된 내용이 없습니다. 지금 화면에 보이는 기본 내용과 공고 2건을 한 번에 넣습니다."));
@@ -399,11 +455,12 @@ async function home() {
     next.timeline = [...tlBox.children].map((i) => i._get()).filter((t) => t.when || t.what);
     next.updatedAt = serverTimestamp(); next.updatedBy = me.email;
     try {
-      const { updatedAt, ...old } = data; await snapshot("site/home", old);
+      const { updatedAt, ...old } = orig; await snapshot("site/home", old);
       await setDoc(doc(db, "site", "home"), next);
       await audit("홈 화면 저장", "site/home"); toast("저장했습니다. 첫 화면에 바로 반영됩니다.");
     } catch (e) { toast("저장하지 못했습니다: " + (e.code || "오류")); return false; }
   }, el("a", { href: "../", target: "_blank", rel: "noopener" }, "첫 화면 열기 ↗"));
+  if (fill) markDirty();
   timeMachine("site/home", async (old) => { await setDoc(doc(db, "site", "home"), { ...old, updatedAt: serverTimestamp(), updatedBy: me.email }); await audit("홈 화면 되돌리기", "site/home"); toast("되돌렸습니다"); go("home"); });
 }
 
