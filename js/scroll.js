@@ -1,6 +1,6 @@
 // 스크롤 연출 (스크롤텔링) — 장면을 화면에 붙잡아 두고, 내려가는 만큼 그림과 글이 바뀝니다.
 //   첫 화면: 그림이 천천히 다가오고 글이 위로 사라짐
-//   중심 말씀: 한 단어씩 밝아짐 · 비전: 그림과 글이 차례로 바뀜
+//   중심 문장: 한 단어씩 밝아짐 · 비전: 그림과 글이 차례로 바뀜
 //   걸어온 길: 연혁 단계마다 나무 단면에 나이테가 한 겹씩 쌓임 · 어린이집: 사진이 화면 가득 펼쳐짐 · 나머지: 화면에 들어오면 한 번 떠오름
 // '동작 줄이기'를 켠 기기, 아주 낮은 화면에서는 붙잡지 않고 모두 펼쳐 보여 줌 (CSS가 처리)
 const $ = (s, r = document) => r.querySelector(s);
@@ -13,12 +13,12 @@ const mqShort = window.matchMedia ? matchMedia("(max-height: 479px)") : { matche
 const still = () => mqReduce.matches || mqShort.matches;
 
 const hdr = $("#hdr"), hero = $("#s-hero"), about = $("#about"), vis = $("#s-vision"), ringsSec = $("#rings"), kids = $("#kids"), call = $("#s-call");
-const GOLD = ["지혜", "빛", "별", "영원토록"];
+const GOLD = ["지혜", "빛", "별", "오래도록"];
 let words = [], rings = [], tlItems = [];
 const trees = $$("#tree-art img"); // 연혁 단계별 나무 단면 (안쪽 나이테는 그대로, 바깥에 새 나이테가 쌓임)
 const darks = [about, call, $("#inquiry"), $(".site-footer")].filter(Boolean);
 
-// 중심 말씀을 단어로 나눔 (글자만 다룸)
+// 중심 문장을 단어로 나눔 (글자만 다룸)
 function splitSay() {
   const p = $("#say"); if (!p) return;
   const text = p.textContent.trim().replace(/\s+/g, " ");
@@ -67,7 +67,7 @@ function frame() {
   queued = false;
   if (hdr) {
     hdr.classList.toggle("solid", scrollY > 40);
-    // 짙은 장면(중심 말씀·문의·맨 아래) 위에서는 머리글도 어둡게
+    // 짙은 장면(중심 문장·문의·맨 아래) 위에서는 머리글도 어둡게
     const y = 34, dark = darks.some((s) => { const r = s.getBoundingClientRect(); return r.top <= y && r.bottom >= y; });
     hdr.classList.toggle("dark", dark);
   }
