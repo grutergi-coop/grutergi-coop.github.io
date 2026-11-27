@@ -1,0 +1,22 @@
+/* 일반 협동조합안(검토용) 화면에만 더하는 꾸밈 — 나머지는 ../css/style.css 그대로 */
+
+/* 맨 위 '검토용' 띠: 본 사이트와 헷갈리지 않게 */
+/* 화면 아래에 붙여 두어 위쪽 메뉴를 가리지 않음 */
+.coop-ribbon{position:fixed;left:0;right:0;bottom:0;z-index:60;margin:0;padding:8px 16px calc(8px + env(safe-area-inset-bottom));text-align:center;font-size:13.5px;line-height:1.5;
+  background:#FFF4D6;color:#5B4300;border-top:1px solid #EAD9A6;box-shadow:0 -4px 14px rgba(0,0,0,.06)}
+body{padding-bottom:44px}
+.coop-ribbon a{color:inherit;text-decoration:underline;text-underline-offset:2px}
+.coop-ribbon b{font-weight:700}
+html[data-theme="dark"] .coop-ribbon{background:#3A2F12;color:#F3E2B0;border-color:#5A4A1E}
+@media (prefers-color-scheme:dark){html:not([data-theme]) .coop-ribbon{background:#3A2F12;color:#F3E2B0;border-color:#5A4A1E}}
+
+/* 이익을 나누지 않는 협동조합 */
+.coop-np .stack{max-width:720px}
+.np-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:12px}
+.np-list li{display:grid;gap:4px;padding:16px 18px;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
+.np-list b{font-size:16.5px;color:var(--ink)}
+.np-list span{color:var(--muted);line-height:1.65}
+@media (min-width:860px){.np-list{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+.foot-note{color:var(--muted);font-size:14px}
+@media print{.coop-ribbon{display:none}body{padding-bottom:0}}
