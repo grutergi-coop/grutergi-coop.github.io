@@ -17,6 +17,10 @@
   X-Robots-Tag: noindex, nofollow
   Cache-Control: no-store
 
+# 일반 협동조합안(검토용) 화면: 검색 노출 금지
+/coop/*
+  X-Robots-Tag: noindex, nofollow
+
 # 저장소 안내·규칙 파일은 검색에 잡히지 않게
 /README.md
   X-Robots-Tag: noindex
